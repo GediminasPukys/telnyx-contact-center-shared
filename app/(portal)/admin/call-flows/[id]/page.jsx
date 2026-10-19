@@ -1,4 +1,6 @@
 "use client";
+import { useUiText, UiText } from "@/components/i18n/use-ui-text";
+
 
 import React, {
   useEffect,
@@ -50,7 +52,7 @@ import {
 } from "@/components/ui/context-menu";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger, tabsTriggerCompactClass } from "@/components/ui/tabs";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -115,6 +117,7 @@ import {
   IconApi,
   IconDatabase,
   IconGitBranch,
+  IconCalendarClock,
   IconGitFork,
   IconCircuitGround,
   IconCircleCheckFilled,
@@ -147,6 +150,7 @@ import PlayAudioNodeEditor from "@/components/voice-flow/PlayAudioNodeEditor";
 import TranscriptionNodeEditor from "@/components/voice-flow/TranscriptionNodeEditor";
 import StreamingStartNodeEditor from "@/components/voice-flow/StreamingStartNodeEditor";
 import ConditionNodeEditor from "@/components/voice-flow/ConditionNodeEditor";
+import ScheduleNodeEditor from "@/components/voice-flow/ScheduleNodeEditor";
 import SwitchNodeEditor from "@/components/voice-flow/SwitchNodeEditor";
 import SetVariableNodeEditor, {
   SetVariableNodeEditorSaveButton,
@@ -162,6 +166,8 @@ import AnswerNodeEditor from "@/components/voice-flow/AnswerNodeEditor";
 import EnqueueNodeEditor from "@/components/voice-flow/EnqueueNodeEditor";
 import SetQueueOptionsNodeEditor from "@/components/voice-flow/SetQueueOptionsNodeEditor";
 import AgentAssistNodeEditor from "@/components/voice-flow/AgentAssistNodeEditor";
+import { useAssistantEventDestinationConfirmation } from "@/components/voice-flow/AssistantEventDestinationConfirmation";
+import { saveFlowWithAssistantConfirmation } from "@/lib/ai/flow-save-client.mjs";
 import ClientStateUpdateNodeEditor from "@/components/voice-flow/ClientStateUpdateNodeEditor";
 import { EdgeVariableMapper } from "@/components/voice-flow/EdgeVariableMapper";
 import { VariableInput } from "@/components/voice-flow/VariableInput";
@@ -215,6 +221,7 @@ const iconMap = {
   IconSquare,
   IconPlayerPause,
   IconGitBranch,
+  IconCalendarClock,
   IconGitMerge,
   IconVariable,
   IconCircuitSwitchOpen,
@@ -308,14 +315,15 @@ const getNodeExecutionIcon = (nodeType) => {
 
 // Custom ToolHeader for webhooks with icons
 function WebhookToolHeader({ eventType, direction, timestamp, source, label, className }) {
+  const tUi = useUiText();
   const Icon = getWebhookIcon(eventType);
   const isSent = direction === "sent";
   const isTelnyxStandaloneStt = source === "telnyx_standalone_stt_websocket";
   const isVoiceApiTranscriptionWebhook = eventType === "call.transcription";
   const displayLabel = isTelnyxStandaloneStt
-    ? label || "Telnyx Standalone STT Event"
+    ? label || tUi("Telnyx Standalone STT Event")
     : isVoiceApiTranscriptionWebhook
-      ? "Voice API In-call Transcription Webhook"
+      ? tUi("Voice API In-call Transcription Webhook")
       : eventType;
 
   // Format timestamp with milliseconds
@@ -351,21 +359,15 @@ function WebhookToolHeader({ eventType, direction, timestamp, source, label, cla
           {Icon}
           <span className="font-medium text-sm">{displayLabel}</span>
           {isTelnyxStandaloneStt && (
-            <Badge className="gap-1.5 rounded-full text-xs" variant="outline">
-              WebSocket
-            </Badge>
+            <Badge className="gap-1.5 rounded-full text-xs" variant="outline">{tUi("WebSocket")}</Badge>
           )}
           <Badge className="gap-1.5 rounded-full text-xs" variant="secondary">
             {isSent ? (
               <>
-                <IconCircleCheck className="size-4 text-orange-600" />
-                Sent
-              </>
+                <IconCircleCheck className="size-4 text-orange-600" />{tUi("Sent")}</>
             ) : (
               <>
-                <IconCircleCheck className="size-4 text-green-600" />
-                Received
-              </>
+                <IconCircleCheck className="size-4 text-green-600" />{tUi("Received")}</>
             )}
           </Badge>
         </div>
@@ -388,6 +390,7 @@ function NodeExecutionToolHeader({
   timestamp,
   className,
 }) {
+  const tUi = useUiText();
   const Icon = getNodeExecutionIcon(nodeType);
 
   // Format timestamp with milliseconds
@@ -428,14 +431,10 @@ function NodeExecutionToolHeader({
           >
             {success ? (
               <>
-                <IconCircleCheckFilled className="size-4" />
-                Success
-              </>
+                <IconCircleCheckFilled className="size-4" />{tUi("Success")}</>
             ) : (
               <>
-                <IconAlertCircle className="size-4" />
-                Failed
-              </>
+                <IconAlertCircle className="size-4" />{tUi("Failed")}</>
             )}
           </Badge>
         </div>
@@ -507,9 +506,7 @@ function JsonCodeView({ value, className = "mt-1", maxHeight }) {
 function renderNodeExecutionDetails(nodeType, details, success) {
   if (!details) {
     return (
-      <div className="p-3 text-sm text-muted-foreground">
-        No details available
-      </div>
+      <div className="p-3 text-sm text-muted-foreground"><UiText>No details available</UiText></div>
     );
   }
 
@@ -522,20 +519,20 @@ function renderNodeExecutionDetails(nodeType, details, success) {
     return (
       <div className="p-3 space-y-3 text-sm">
         <div className="space-y-1">
-          <span className="font-semibold">Variable Name:</span>
+          <span className="font-semibold"><UiText>Variable Name:</UiText></span>
           <code className="ml-2 bg-muted px-2 py-0.5 rounded text-xs break-all">
             {details.variable_name}
           </code>
         </div>
         <div className="space-y-1">
-          <span className="font-semibold">Expression:</span>
+          <span className="font-semibold"><UiText>Expression:</UiText></span>
           <code className="ml-2 bg-muted px-2 py-0.5 rounded text-xs break-all">
             {details.expression}
           </code>
         </div>
         {success ? (
           <div className="space-y-1 border-t pt-3">
-            <span className="font-semibold">Result:</span>
+            <span className="font-semibold"><UiText>Result:</UiText></span>
             {resultJsonPreview ? (
               <CodeBlock
                 code={resultJsonPreview}
@@ -552,7 +549,7 @@ function renderNodeExecutionDetails(nodeType, details, success) {
           </div>
         ) : (
           <div className="text-destructive border-t pt-3">
-            <span className="font-semibold">Error:</span>
+            <span className="font-semibold"><UiText>Error:</UiText></span>
             <span className="ml-2">{details.error}</span>
           </div>
         )}
@@ -570,28 +567,24 @@ function renderNodeExecutionDetails(nodeType, details, success) {
       <div className="p-3 space-y-3 text-sm">
         <div className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
           <div className="rounded-md border bg-muted/30 p-2">
-            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Server</div>
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground"><UiText>Server</UiText></div>
             <code className="break-all">{details.server_id || "—"}</code>
           </div>
           <div className="rounded-md border bg-muted/30 p-2">
-            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Tool</div>
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground"><UiText>Tool</UiText></div>
             <code className="break-all">{details.tool_name || "—"}</code>
           </div>
         </div>
 
         <div className="space-y-1">
-          <div className="font-semibold text-xs uppercase text-muted-foreground">
-            Request Payload
-          </div>
+          <div className="font-semibold text-xs uppercase text-muted-foreground"><UiText>Request Payload</UiText></div>
           <JsonCodeView value={details.request || {}} maxHeight={280} className="mt-1 max-h-72 overflow-auto" />
         </div>
 
         {success ? (
           <div className="space-y-1 border-t pt-3">
             <div className="flex items-center justify-between gap-2">
-              <div className="font-semibold text-xs uppercase text-muted-foreground">
-                Response Payload
-              </div>
+              <div className="font-semibold text-xs uppercase text-muted-foreground"><UiText>Response Payload</UiText></div>
               {details.response_variable && (
                 <Badge variant="outline" className="text-[10px]">
                   → {details.response_variable}
@@ -602,9 +595,7 @@ function renderNodeExecutionDetails(nodeType, details, success) {
           </div>
         ) : (
           <div className="space-y-1 border-t pt-3">
-            <div className="font-semibold text-xs uppercase text-muted-foreground">
-              Response Payload
-            </div>
+            <div className="font-semibold text-xs uppercase text-muted-foreground"><UiText>Response Payload</UiText></div>
             <JsonCodeView value={responsePayload || details.error || {}} maxHeight={360} className="mt-1 max-h-96 overflow-auto" />
           </div>
         )}
@@ -617,24 +608,22 @@ function renderNodeExecutionDetails(nodeType, details, success) {
     return (
       <div className="p-3 space-y-3 text-sm">
         <div className="space-y-1">
-          <div className="font-semibold text-xs uppercase text-muted-foreground">
-            Request
-          </div>
+          <div className="font-semibold text-xs uppercase text-muted-foreground"><UiText>Request</UiText></div>
           <div>
-            <span className="font-semibold">Method:</span>
+            <span className="font-semibold"><UiText>Method:</UiText></span>
             <Badge className="ml-2" variant="outline">
               {details.request?.method}
             </Badge>
           </div>
           <div>
-            <span className="font-semibold">URL:</span>
+            <span className="font-semibold"><UiText>URL:</UiText></span>
             <code className="ml-2 bg-muted px-2 py-0.5 rounded text-xs break-all">
               {details.request?.url}
             </code>
           </div>
           {details.request?.body && (
             <div>
-              <span className="font-semibold">Body:</span>
+              <span className="font-semibold"><UiText>Body:</UiText></span>
               <CodeBlock
                 code={details.request.body}
                 language="json"
@@ -648,11 +637,9 @@ function renderNodeExecutionDetails(nodeType, details, success) {
 
         {details.response ? (
           <div className="space-y-1 border-t pt-3">
-            <div className="font-semibold text-xs uppercase text-muted-foreground">
-              Response
-            </div>
+            <div className="font-semibold text-xs uppercase text-muted-foreground"><UiText>Response</UiText></div>
             <div>
-              <span className="font-semibold">Status:</span>
+              <span className="font-semibold"><UiText>Status:</UiText></span>
               <span
                 className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
                   details.response.status >= 200 &&
@@ -674,7 +661,7 @@ function renderNodeExecutionDetails(nodeType, details, success) {
             </div>
             {details.response?.body && (
               <div>
-                <span className="font-semibold">Body:</span>
+                <span className="font-semibold"><UiText>Body:</UiText></span>
                 <CodeBlock
                   code={
                     typeof details.response.body === "string"
@@ -692,7 +679,7 @@ function renderNodeExecutionDetails(nodeType, details, success) {
         ) : (
           details.error && (
             <div className="text-destructive border-t pt-3">
-              <span className="font-semibold">Error:</span>
+              <span className="font-semibold"><UiText>Error:</UiText></span>
               <span className="ml-2">{details.error}</span>
             </div>
           )
@@ -706,32 +693,32 @@ function renderNodeExecutionDetails(nodeType, details, success) {
     return (
       <div className="p-3 space-y-2 text-sm">
         <div>
-          <span className="font-semibold">Left Operand:</span>
+          <span className="font-semibold"><UiText>Left Operand:</UiText></span>
           <code className="ml-2 bg-muted px-2 py-0.5 rounded text-xs">
             {details.left_operand}
           </code>
         </div>
         <div>
-          <span className="font-semibold">Operator:</span>
+          <span className="font-semibold"><UiText>Operator:</UiText></span>
           <Badge className="ml-2" variant="outline">
             {details.operator}
           </Badge>
         </div>
         <div>
-          <span className="font-semibold">Right Operand:</span>
+          <span className="font-semibold"><UiText>Right Operand:</UiText></span>
           <code className="ml-2 bg-muted px-2 py-0.5 rounded text-xs">
             {details.right_operand}
           </code>
         </div>
         <div>
-          <span className="font-semibold">Data Type:</span>
+          <span className="font-semibold"><UiText>Data Type:</UiText></span>
           <Badge className="ml-2" variant="secondary">
             {details.data_type}
           </Badge>
         </div>
         {success ? (
           <div className="pt-2 border-t">
-            <span className="font-semibold">Result:</span>
+            <span className="font-semibold"><UiText>Result:</UiText></span>
             <Badge
               className="ml-2"
               variant={details.result ? "default" : "secondary"}
@@ -744,7 +731,7 @@ function renderNodeExecutionDetails(nodeType, details, success) {
           </div>
         ) : (
           <div className="text-destructive">
-            <span className="font-semibold">Error:</span>
+            <span className="font-semibold"><UiText>Error:</UiText></span>
             <span className="ml-2">{details.error}</span>
           </div>
         )}
@@ -757,20 +744,20 @@ function renderNodeExecutionDetails(nodeType, details, success) {
     return (
       <div className="p-3 space-y-2 text-sm">
         <div>
-          <span className="font-semibold">Variable:</span>
+          <span className="font-semibold"><UiText>Variable:</UiText></span>
           <code className="ml-2 bg-muted px-2 py-0.5 rounded text-xs">
             {details.variable}
           </code>
         </div>
         <div>
-          <span className="font-semibold">Value:</span>
+          <span className="font-semibold"><UiText>Value:</UiText></span>
           <code className="ml-2 bg-muted px-2 py-0.5 rounded text-xs">
             {JSON.stringify(details.variable_value)}
           </code>
         </div>
         {details.cases && details.cases.length > 0 && (
           <div>
-            <span className="font-semibold">Cases:</span>
+            <span className="font-semibold"><UiText>Cases:</UiText></span>
             <div className="ml-2 mt-1 space-y-1">
               {details.cases.map((c, idx) => (
                 <div key={idx} className="text-xs">
@@ -789,7 +776,7 @@ function renderNodeExecutionDetails(nodeType, details, success) {
           </div>
         )}
         <div className="pt-2 border-t">
-          <span className="font-semibold">Matched:</span>
+          <span className="font-semibold"><UiText>Matched:</UiText></span>
           <Badge className="ml-2" variant="default">
             {details.output_path}
           </Badge>
@@ -803,14 +790,14 @@ function renderNodeExecutionDetails(nodeType, details, success) {
     return (
       <div className="p-3 space-y-2 text-sm">
         <div>
-          <span className="font-semibold">Operator:</span>
+          <span className="font-semibold"><UiText>Operator:</UiText></span>
           <Badge className="ml-2" variant="outline">
             {details.operator}
           </Badge>
         </div>
         {details.conditions && details.conditions.length > 0 && (
           <div>
-            <span className="font-semibold">Conditions:</span>
+            <span className="font-semibold"><UiText>Conditions:</UiText></span>
             <div className="ml-2 mt-2 space-y-2">
               {details.conditions.map((cond, idx) => (
                 <div key={idx} className="text-xs bg-muted p-2 rounded">
@@ -832,7 +819,7 @@ function renderNodeExecutionDetails(nodeType, details, success) {
         )}
         {success ? (
           <div className="pt-2 border-t">
-            <span className="font-semibold">Final Result:</span>
+            <span className="font-semibold"><UiText>Final Result:</UiText></span>
             <Badge
               className="ml-2"
               variant={details.final_result ? "default" : "secondary"}
@@ -845,7 +832,7 @@ function renderNodeExecutionDetails(nodeType, details, success) {
           </div>
         ) : (
           <div className="text-destructive">
-            <span className="font-semibold">Error:</span>
+            <span className="font-semibold"><UiText>Error:</UiText></span>
             <span className="ml-2">{details.error}</span>
           </div>
         )}
@@ -877,6 +864,7 @@ function renderNodeExecutionDetails(nodeType, details, success) {
 
 // Custom node component with connection handles
 function CustomNode({ data, selected }) {
+  const tUi = useUiText();
   const nodeDef = VOICE_FLOW_NODES[data.nodeType];
   if (!nodeDef) return null;
 
@@ -997,9 +985,7 @@ function CustomNode({ data, selected }) {
               {hasInput && (
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <div className="text-xs font-medium whitespace-nowrap ml-3">
-                      Execute
-                    </div>
+                    <div className="text-xs font-medium whitespace-nowrap ml-3">{tUi("Execute")}</div>
                   </div>
                 </div>
               )}
@@ -1012,7 +998,7 @@ function CustomNode({ data, selected }) {
                   // Use dynamic outputDescriptions/Events/Labels if available (for dial/switch nodes), otherwise use nodeDef
                   const outputDescription =
                     data.dynamicOutputDescriptions?.[index] ||
-                    nodeDef.outputDescriptions?.[index];
+                    tUi(nodeDef.outputDescriptions?.[index]);
                   const outputEvent =
                     data.dynamicOutputEvents?.[index] ||
                     nodeDef.outputEvents?.[index];
@@ -1043,9 +1029,7 @@ function CustomNode({ data, selected }) {
               <Badge
                 variant="destructive"
                 className="text-xs w-full justify-center"
-              >
-                Missing required fields
-              </Badge>
+              >{tUi("Missing required fields")}</Badge>
             </div>
           )}
         </div>
@@ -1054,9 +1038,7 @@ function CustomNode({ data, selected }) {
         <ContextMenuItem
           onClick={() => data.onDelete && data.onDelete(data.nodeId)}
         >
-          <IconTrash className="h-4 w-4 mr-2" />
-          Delete Node
-        </ContextMenuItem>
+          <IconTrash className="h-4 w-4 mr-2" />{tUi("Delete Node")}</ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>
   );
@@ -1076,6 +1058,7 @@ function CustomEdge({
   selected,
   data,
 }) {
+  const tUi = useUiText();
   // Route connections outside the source and target cards before turning.
   // This is especially important for right-to-left (backward) connections:
   // a regular Bezier curve can double back underneath either node, whereas a
@@ -1142,13 +1125,13 @@ function CustomEdge({
               pointerEvents: "all",
             }}
             className="nodrag nopan"
-            title={`${varCount} variable${varCount > 1 ? "s" : ""} mapped`}
+            title={tUi("Mapped variables: {value0}", { value0: varCount })}
           >
             <button
               className="flex items-center gap-1 px-2 py-0.5 bg-telnyx-green text-white rounded-full border border-background shadow-md hover:scale-105 transition-transform text-xs"
               onClick={onConfigureVariables}
             >
-              {varCount} var{varCount > 1 ? "s" : ""}
+              {varCount}{tUi(" var")}{varCount > 1 ? tUi("s") : ""}
             </button>
           </div>
         </EdgeLabelRenderer>
@@ -1169,14 +1152,14 @@ function CustomEdge({
             <button
               className="flex items-center justify-center w-6 h-6 bg-telnyx-green text-white rounded-full border-2 border-background shadow-lg hover:scale-110 transition-transform"
               onClick={onConfigureVariables}
-              title="Configure variables"
+              title={tUi("Configure variables")}
             >
               <IconCurrencyDollar className="h-3 w-3" />
             </button>
             <button
               className="flex items-center justify-center w-6 h-6 bg-destructive text-destructive-foreground rounded-full border-2 border-background shadow-lg hover:scale-110 transition-transform"
               onClick={onEdgeClick}
-              title="Delete connection"
+              title={tUi("Delete connection")}
             >
               <IconX className="h-3 w-3" />
             </button>
@@ -1204,6 +1187,7 @@ function VariableCard({
   nodes,
   edges,
 }) {
+  const tUi = useUiText();
   const [editingName, setEditingName] = useState(varName);
 
   // Sync editingName when varName changes (after successful rename)
@@ -1216,9 +1200,8 @@ function VariableCard({
     return checkDuplicateVariableName(
       editingName,
       { nodes, edges, globalVariables },
-      { type: "global", oldName: varName },
-    );
-  }, [editingName, nodes, edges, globalVariables, varName]);
+      { type: "global", oldName: varName }, tUi);
+  }, [editingName, nodes, edges, globalVariables, varName, tUi]);
 
   const handleNameBlur = () => {
     const newVarName = editingName.trim();
@@ -1228,8 +1211,7 @@ function VariableCard({
       const check = checkDuplicateVariableName(
         newVarName,
         { nodes, edges, globalVariables },
-        { type: "global", oldName: varName },
-      );
+        { type: "global", oldName: varName }, tUi);
 
       if (check.isDuplicate) {
         notify({
@@ -1270,7 +1252,7 @@ function VariableCard({
 
       {/* Variable Name - Full width */}
       <div>
-        <Label className="text-xs mb-1">Variable Name</Label>
+        <Label className="text-xs mb-1">{tUi("Variable Name")}</Label>
         <Input
           value={editingName}
           onChange={(e) => setEditingName(e.target.value)}
@@ -1280,7 +1262,7 @@ function VariableCard({
               e.currentTarget.blur();
             }
           }}
-          placeholder="variable_name"
+          placeholder={tUi("variable_name")}
           className={`text-xs font-mono ${
             duplicateCheck.isDuplicate ? "border-yellow-500" : ""
           }`}
@@ -1295,7 +1277,7 @@ function VariableCard({
 
       {/* Type - Full width */}
       <div>
-        <Label className="text-xs mb-1">Type</Label>
+        <Label className="text-xs mb-1">{tUi("Type")}</Label>
         <Select
           value={varDef.type || "string"}
           onValueChange={(value) => {
@@ -1312,16 +1294,16 @@ function VariableCard({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="string">String</SelectItem>
-            <SelectItem value="number">Number</SelectItem>
-            <SelectItem value="boolean">Boolean</SelectItem>
+            <SelectItem value="string">{tUi("String")}</SelectItem>
+            <SelectItem value="number">{tUi("Number")}</SelectItem>
+            <SelectItem value="boolean">{tUi("Boolean")}</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
       {/* Value - Full width */}
       <div>
-        <Label className="text-xs mb-1">Value</Label>
+        <Label className="text-xs mb-1">{tUi("Value")}</Label>
         <Input
           value={varDef.value || ""}
           onChange={(e) => {
@@ -1333,7 +1315,7 @@ function VariableCard({
               },
             });
           }}
-          placeholder="Enter value"
+          placeholder={tUi("Enter value")}
           className="text-xs"
         />
       </div>
@@ -1353,6 +1335,7 @@ function normalizeAiAssistants(payload) {
 }
 
 export default function FlowBuilderPage() {
+  const tUi = useUiText();
   const params = useParams();
   const router = useRouter();
   const flowId = params.id;
@@ -1413,6 +1396,7 @@ export default function FlowBuilderPage() {
     checkAuth();
   }, [router]);
   const [saving, setSaving] = useState(false);
+  const assistantDestination = useAssistantEventDestinationConfirmation();
   const [selectedNode, setSelectedNode] = useState(null);
   const [nodeConfig, setNodeConfig] = useState({});
   const [setVariableValidation, setSetVariableValidation] = useState({
@@ -2177,6 +2161,7 @@ export default function FlowBuilderPage() {
   }, [flowId, clearFlowEvents]);
 
   async function handleSave() {
+    if (saving) return;
     // Check if flow has an initiator node before saving
     const hasInitiator = nodes.some(
       (node) =>
@@ -2249,11 +2234,7 @@ export default function FlowBuilderPage() {
           if (!hasSkills && !hasSkillsInClientState) {
             notify({
               title: "Error",
-              description: `Cannot save flow: The "Enqueue Call" node "${
-                node.data?.label || node.id
-              }" uses a skill-based queue ("${
-                queue.display_name || queueName
-              }") but no required skills are defined. Please add at least one skill with a proficiency level.`,
+              description: tUi("Cannot save flow: The \"Enqueue Call\" node \"{value0}\" uses a skill-based queue (\"{value1}\") but no required skills are defined. Please add at least one skill with a proficiency level.", {value0: node.data?.label || node.id, value1: queue.display_name || queueName}),
               variant: "error",
             });
             return;
@@ -2264,22 +2245,14 @@ export default function FlowBuilderPage() {
 
     setSaving(true);
     try {
-      const res = await fetch(`/api/voice/flows/${flowId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: flowName,
-          description: flowDescription,
-          nodes,
-          edges,
-          globalVariables,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok || !data.ok) {
-        throw new Error(data.error || "Failed to save flow");
-      }
+      const data = await saveFlowWithAssistantConfirmation(`/api/voice/flows/${flowId}`, {
+        name: flowName,
+        description: flowDescription,
+        nodes,
+        edges,
+        globalVariables,
+      }, { confirm: assistantDestination.confirm });
+      if (!data) return;
 
       // Update initial state after successful save
       initialStateRef.current = createCallFlowDirtySnapshot({
@@ -2303,7 +2276,7 @@ export default function FlowBuilderPage() {
       console.error("Error saving flow:", error);
       notify({
         title: "Error",
-        description: "Failed to save flow",
+        description: error.message || "Failed to save flow",
         variant: "error",
       });
     } finally {
@@ -2691,7 +2664,7 @@ export default function FlowBuilderPage() {
   if (checkingAuth || !isAuthorized) {
     return (
       <AdminPageShell>
-        <AdminPageHeader title="Call Flow Editor" badges={<Badge variant="secondary">Authorizing</Badge>} />
+        <AdminPageHeader title={tUi("Call Flow Editor")} badges={<Badge variant="secondary">{tUi("Authorizing")}</Badge>} />
         <AutomationsSectionPage activeId="call-app-flows">
           <AdminPageContent>
             <Card className="w-full">
@@ -2711,13 +2684,13 @@ export default function FlowBuilderPage() {
   if (loading) {
     return (
       <AdminPageShell>
-        <AdminPageHeader title="Call Flow Editor" badges={<Badge variant="secondary">Loading</Badge>} />
+        <AdminPageHeader title={tUi("Call Flow Editor")} badges={<Badge variant="secondary">{tUi("Loading")}</Badge>} />
         <AutomationsSectionPage activeId="call-app-flows">
           <AdminPageContent>
             <div className="flex h-full items-center justify-center">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <IconLoader2 className="h-4 w-4 text-green-500 animate-spin" />
-                <span>Loading flow...</span>
+                <span>{tUi("Loading flow...")}</span>
               </div>
             </div>
           </AdminPageContent>
@@ -2733,11 +2706,11 @@ export default function FlowBuilderPage() {
   return (
     <AdminPageShell>
       <AdminPageHeader
-        title={flowName || "Call Flow Editor"}
+        title={flowName || tUi("Call Flow Editor")}
         badges={hasUnsavedChanges ? (
-          <Badge variant="outline" className="border-orange-500 text-orange-700 dark:text-orange-300">Unsaved</Badge>
+          <Badge variant="outline" className="border-orange-500 text-orange-700 dark:text-orange-300">{tUi("Unsaved")}</Badge>
         ) : (
-          <Badge variant="outline" className="border-emerald-500 text-emerald-700 dark:text-emerald-300">Saved</Badge>
+          <Badge variant="outline" className="border-emerald-500 text-emerald-700 dark:text-emerald-300">{tUi("Saved")}</Badge>
         )}
       />
       <AutomationsSectionPage activeId="call-app-flows" onNavigate={requestNavigation}>
@@ -2751,10 +2724,8 @@ export default function FlowBuilderPage() {
                 onValueChange={setLeftPanelTab}
                 className="flex-1 flex flex-col h-full"
               >
-                <TabsList className="w-full rounded-none border-b flex-shrink-0">
-                  <TabsTrigger value="nodes" className="flex-1">
-                    Nodes
-                  </TabsTrigger>
+                <TabsList className="px-4">
+                  <TabsTrigger value="nodes">{tUi("Nodes")}</TabsTrigger>
                 </TabsList>
 
                 <TabsContent
@@ -2763,16 +2734,14 @@ export default function FlowBuilderPage() {
                 >
                   {/* Nodes Tab */}
                   <div className="p-4 border-b">
-                    <p className="text-xs text-muted-foreground">
-                      Drag nodes to canvas, click to add, or right-click canvas
-                    </p>
+                    <p className="text-xs text-muted-foreground">{tUi("Drag nodes to canvas, click to add, or right-click canvas")}</p>
                   </div>
 
                   <div className="p-4 space-y-4">
                     {Object.keys(nodesByCategory).map((category) => (
                       <div key={category}>
                         <h4 className="text-xs font-semibold mb-2 text-muted-foreground uppercase">
-                          {getCategoryDisplayName(category)}
+                          {tUi(getCategoryDisplayName(category))}
                         </h4>
                         <div className="space-y-1">
                           {nodesByCategory[category].map((node) => (
@@ -2809,14 +2778,14 @@ export default function FlowBuilderPage() {
                     <Input
                       value={flowName}
                       onChange={(e) => setFlowName(e.target.value)}
-                      placeholder="Flow name"
+                      placeholder={tUi("Flow name")}
                       className="font-semibold"
                     />
                     <Button
                       variant="ghost"
                       size="icon"
                       onClick={handleOpenDescriptionDialog}
-                      title="Edit flow description"
+                      title={tUi("Edit flow description")}
                     >
                       <IconInfoCircle className="h-4 w-4" />
                     </Button>
@@ -2839,9 +2808,7 @@ export default function FlowBuilderPage() {
                         <PopoverContent className="w-80" align="end">
                           <div className="space-y-2">
                             <h4 className="font-semibold text-sm text-destructive flex items-center gap-2">
-                              <IconAlertTriangle className="h-4 w-4" />
-                              Validation Errors
-                            </h4>
+                              <IconAlertTriangle className="h-4 w-4" />{tUi("Validation Errors")}</h4>
                             <Separator />
                             <ul className="text-xs space-y-2 max-h-60 overflow-y-auto">
                               {validation.errors.map((error, i) => (
@@ -2872,9 +2839,7 @@ export default function FlowBuilderPage() {
                         <PopoverContent className="w-80" align="end">
                           <div className="space-y-2">
                             <h4 className="font-semibold text-sm text-yellow-600 dark:text-yellow-500 flex items-center gap-2">
-                              <IconAlertTriangle className="h-4 w-4" />
-                              Warnings
-                            </h4>
+                              <IconAlertTriangle className="h-4 w-4" />{tUi("Warnings")}</h4>
                             <Separator />
                             <ul className="text-xs space-y-2 max-h-60 overflow-y-auto">
                               {validation.warnings.map((warning, i) => (
@@ -2915,9 +2880,7 @@ export default function FlowBuilderPage() {
                         variant="outline"
                         onClick={() => setShowMonitor(!showMonitor)}
                       >
-                        <IconActivity className="h-4 w-4 mr-2" />
-                        Monitor
-                      </Button>
+                        <IconActivity className="h-4 w-4 mr-2" />{tUi("Monitor")}</Button>
                     );
                   })()}
                   <Button
@@ -2931,7 +2894,7 @@ export default function FlowBuilderPage() {
                     }
                   >
                     <IconDeviceFloppy className="h-4 w-4 mr-2" />
-                    {saving ? "Saving..." : "Save"}
+                    {saving ? tUi("Saving...") : tUi("Save")}
                   </Button>
                 </div>
               </div>
@@ -2967,11 +2930,8 @@ export default function FlowBuilderPage() {
                     className="bg-card border rounded p-2 text-xs"
                   >
                     <div className="text-muted-foreground">
-                      {nodes.length} nodes • {edges.length} connections
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-0">
-                      Drag nodes from sidebar or right-click to add
-                    </div>
+                      {nodes.length}{tUi(" nodes • ")}{edges.length}{tUi(" connections")}</div>
+                    <div className="text-xs text-muted-foreground mt-0">{tUi("Drag nodes from sidebar or right-click to add")}</div>
                   </Panel>
                 </ReactFlow>
 
@@ -2992,7 +2952,7 @@ export default function FlowBuilderPage() {
                       <div className="flex items-center gap-2 px-2 py-1.5 border rounded-md bg-background">
                         <IconSearch className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
                         <Input
-                          placeholder="Search nodes..."
+                          placeholder={tUi("Search nodes...")}
                           value={contextMenuSearchQuery}
                           onChange={(e) =>
                             setContextMenuSearchQuery(e.target.value)
@@ -3031,7 +2991,7 @@ export default function FlowBuilderPage() {
                                 )}
                                 <div className="px-2 py-1.5">
                                   <div className="text-xs font-semibold text-muted-foreground uppercase mb-1">
-                                    {getCategoryDisplayName(category)}
+                                    {tUi(getCategoryDisplayName(category))}
                                   </div>
                                   {filteredNodes.map((node) => (
                                     <button
@@ -3064,8 +3024,8 @@ export default function FlowBuilderPage() {
                           return (
                             <div className="px-4 py-8 text-center text-sm text-muted-foreground">
                               {contextMenuSearchQuery
-                                ? `No nodes found matching "${contextMenuSearchQuery}"`
-                                : "No nodes available"}
+                                ? tUi("No nodes found matching \"{value0}\"", { value0: contextMenuSearchQuery })
+                                : tUi("No nodes available")}
                             </div>
                           );
                         }
@@ -3085,13 +3045,9 @@ export default function FlowBuilderPage() {
                 onValueChange={setRightPanelTab}
                 className="flex-1 flex flex-col h-full"
               >
-                <TabsList className="w-full rounded-none border-b flex-shrink-0">
-                  <TabsTrigger value="config" className="flex-1">
-                    Config
-                  </TabsTrigger>
-                  <TabsTrigger value="variables" className="flex-1">
-                    Variables
-                  </TabsTrigger>
+                <TabsList className="px-4">
+                  <TabsTrigger value="config">{tUi("Config")}</TabsTrigger>
+                  <TabsTrigger value="variables">{tUi("Variables")}</TabsTrigger>
                 </TabsList>
 
                 <TabsContent
@@ -3104,17 +3060,17 @@ export default function FlowBuilderPage() {
                       <div className="p-4 pb-0 space-y-4 flex-shrink-0">
                         <div>
                           <h3 className="font-semibold">
-                            {selectedNodeDef.label}
+                            {tUi(selectedNodeDef.label)}
                           </h3>
                           <p className="text-xs text-muted-foreground mt-1">
-                            {selectedNodeDef.description}
+                            {tUi(selectedNodeDef.description)}
                           </p>
                         </div>
 
                         <Separator />
 
                         <div>
-                          <Label>Node Label</Label>
+                          <Label>{tUi("Node Label")}</Label>
                           <Input
                             value={selectedNode.data?.label || ""}
                             onChange={(e) => {
@@ -3157,9 +3113,7 @@ export default function FlowBuilderPage() {
                         <div className="space-y-3">
                           {selectedNodeDef.customEditor !==
                             "EnqueueNodeEditor" && (
-                            <h4 className="text-sm font-semibold">
-                              Configuration
-                            </h4>
+                            <h4 className="text-sm font-semibold">{tUi("Configuration")}</h4>
                           )}
 
                           {/* Use custom editor if defined */}
@@ -3293,6 +3247,16 @@ export default function FlowBuilderPage() {
                                     ),
                                   );
                                 }
+                              }}
+                            />
+                          ) : selectedNodeDef.customEditor ===
+                            "ScheduleNodeEditor" ? (
+                            <ScheduleNodeEditor
+                              config={nodeConfig}
+                              onChange={(newConfig) => {
+                                setNodeConfig(newConfig);
+                                setNodes((nds) => nds.map((node) => node.id === selectedNode.id
+                                  ? { ...node, data: { ...node.data, config: newConfig } } : node));
                               }}
                             />
                           ) : selectedNodeDef.customEditor ===
@@ -3775,6 +3739,7 @@ export default function FlowBuilderPage() {
                           ) : selectedNodeDef.customEditor ===
                             "AgentAssistNodeEditor" ? (
                             <AgentAssistNodeEditor
+                              key={selectedNode.id}
                               config={nodeConfig}
                               experimentalFeaturesEnabled={experimentalFeaturesEnabled}
                               availableVariables={getAllVariableNames({
@@ -3908,20 +3873,16 @@ export default function FlowBuilderPage() {
                                         }}
                                         className="w-full"
                                       >
-                                        <TabsList className="w-full grid grid-cols-2">
+                                        <TabsList>
                                           <TabsTrigger
                                             value="static"
-                                            className="text-xs"
-                                          >
-                                            Static
-                                          </TabsTrigger>
+                                            className={tabsTriggerCompactClass}
+                                          >{tUi("Static")}</TabsTrigger>
                                           <TabsTrigger
                                             value="variable"
-                                            className="text-xs"
+                                            className={tabsTriggerCompactClass}
                                           >
-                                            <IconVariable className="h-3 w-3 mr-1" />
-                                            Variable
-                                          </TabsTrigger>
+                                            <IconVariable className="h-3 w-3" />{tUi("Variable")}</TabsTrigger>
                                         </TabsList>
                                       </Tabs>
 
@@ -3938,7 +3899,7 @@ export default function FlowBuilderPage() {
                                             <SelectValue
                                               placeholder={
                                                 paramDef.placeholder ||
-                                                "Select..."
+                                                tUi("Select...")
                                               }
                                             />
                                           </SelectTrigger>
@@ -3946,7 +3907,7 @@ export default function FlowBuilderPage() {
                                             <div className="flex items-center gap-2 px-2 py-2 border-b bg-background sticky top-0 z-10">
                                               <IconSearch className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                                               <Input
-                                                placeholder="Search assistants..."
+                                                placeholder={tUi("Search assistants...")}
                                                 value={assistantSearchQuery}
                                                 onChange={(e) =>
                                                   setAssistantSearchQuery(
@@ -4000,8 +3961,8 @@ export default function FlowBuilderPage() {
                                               ).length === 0 && (
                                                 <div className="px-2 py-6 text-center text-sm text-muted-foreground">
                                                   {assistantSearchQuery
-                                                    ? "No assistants found"
-                                                    : "No AI assistants available"}
+                                                    ? tUi("No assistants found")
+                                                    : tUi("No AI assistants available")}
                                                 </div>
                                               )}
                                             </div>
@@ -4023,15 +3984,15 @@ export default function FlowBuilderPage() {
                                               globalVariables,
                                             },
                                           )}
-                                          placeholder="{{assistant_id}}"
+                                          placeholder={tUi("{{assistant_id}}")}
                                           className="mt-1"
                                         />
                                       )}
 
                                       <p className="text-xs text-muted-foreground">
                                         {!nodeConfig[`${key}_use_variable`]
-                                          ? "Select an AI assistant from the list"
-                                          : "Enter a variable name (e.g., {{assistant_id}}) to dynamically select the assistant"}
+                                          ? tUi("Select an AI assistant from the list")
+                                          : tUi("Enter a variable name (e.g., {{assistant_id}}) to dynamically select the assistant")}
                                       </p>
                                     </div>
                                   ) : paramDef.type === "select" ? (
@@ -4102,8 +4063,8 @@ export default function FlowBuilderPage() {
                                             ) : (
                                               <SelectItem value="" disabled>
                                                 {isQueueNameField
-                                                  ? "No enabled queues available"
-                                                  : "No options available"}
+                                                  ? tUi("No enabled queues available")
+                                                  : tUi("No options available")}
                                               </SelectItem>
                                             )}
                                           </SelectContent>
@@ -4143,8 +4104,8 @@ export default function FlowBuilderPage() {
                                       <span className="text-xs text-muted-foreground">
                                         {nodeConfig[key] === true ||
                                         nodeConfig[key] === "true"
-                                          ? "Enabled"
-                                          : "Disabled"}
+                                          ? tUi("Enabled")
+                                          : tUi("Disabled")}
                                       </span>
                                     </div>
                                   ) : paramDef.type === "boolean" ? (
@@ -4161,12 +4122,8 @@ export default function FlowBuilderPage() {
                                         <SelectValue />
                                       </SelectTrigger>
                                       <SelectContent>
-                                        <SelectItem value="true">
-                                          Yes
-                                        </SelectItem>
-                                        <SelectItem value="false">
-                                          No
-                                        </SelectItem>
+                                        <SelectItem value="true">{tUi("Yes")}</SelectItem>
+                                        <SelectItem value="false">{tUi("No")}</SelectItem>
                                       </SelectContent>
                                     </Select>
                                   ) : (
@@ -4224,19 +4181,13 @@ export default function FlowBuilderPage() {
                           onClick={handleDeleteNode}
                           className="w-full"
                         >
-                          <IconTrash className="h-4 w-4 mr-2" />
-                          Delete Node
-                        </Button>
+                          <IconTrash className="h-4 w-4 mr-2" />{tUi("Delete Node")}</Button>
                       </div>
                     </>
                   ) : (
                     <div className="text-center py-12">
-                      <p className="text-sm text-muted-foreground">
-                        Select a node to configure it
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Right-click on canvas to add nodes
-                      </p>
+                      <p className="text-sm text-muted-foreground">{tUi("Select a node to configure it")}</p>
+                      <p className="text-xs text-muted-foreground mt-2">{tUi("Right-click on canvas to add nodes")}</p>
                     </div>
                   )}
                 </TabsContent>
@@ -4254,31 +4205,21 @@ export default function FlowBuilderPage() {
                         className="w-full"
                         onClick={() => setShowGlobalVariablesPanel(true)}
                       >
-                        <IconVariable className="h-3 w-3 mr-1" />
-                        Manage Global Variables
-                      </Button>
+                        <IconVariable className="h-3 w-3 mr-1" />{tUi("Manage Global Variables")}</Button>
                     </div>
 
                     <div>
-                      <h4 className="font-semibold text-sm mb-2">
-                        Flow Variables
-                      </h4>
-                      <p className="text-xs text-muted-foreground">
-                        All available variables in this flow
-                      </p>
+                      <h4 className="font-semibold text-sm mb-2">{tUi("Flow Variables")}</h4>
+                      <p className="text-xs text-muted-foreground">{tUi("All available variables in this flow")}</p>
                     </div>
 
                     <Separator />
 
                     {/* Global Variables Section */}
                     <div>
-                      <h5 className="text-xs font-semibold text-muted-foreground uppercase mb-2">
-                        Global Variables
-                      </h5>
+                      <h5 className="text-xs font-semibold text-muted-foreground uppercase mb-2">{tUi("Global Variables")}</h5>
                       {Object.keys(globalVariables).length === 0 ? (
-                        <div className="text-xs text-muted-foreground">
-                          No global variables defined
-                        </div>
+                        <div className="text-xs text-muted-foreground">{tUi("No global variables defined")}</div>
                       ) : (
                         <div className="space-y-1">
                           {Object.entries(globalVariables).map(
@@ -4297,11 +4238,11 @@ export default function FlowBuilderPage() {
                                     variant: "success",
                                   });
                                 }}
-                                title="Click to copy variable reference"
+                                title={tUi("Click to copy variable reference")}
                               >
                                 <div className="font-semibold">{`{{global.${varName}}}`}</div>
                                 <div className="text-muted-foreground mt-1">
-                                  {varDef.value || "(empty)"}
+                                  {varDef.value || tUi("(empty)")}
                                 </div>
                               </div>
                             ),
@@ -4314,9 +4255,7 @@ export default function FlowBuilderPage() {
 
                     {/* Edge Variables Section */}
                     <div>
-                      <h5 className="text-xs font-semibold text-muted-foreground uppercase mb-2">
-                        Edge Variables
-                      </h5>
+                      <h5 className="text-xs font-semibold text-muted-foreground uppercase mb-2">{tUi("Edge Variables")}</h5>
                       {(() => {
                         const edgeVars = [];
                         edges.forEach((edge) => {
@@ -4332,9 +4271,7 @@ export default function FlowBuilderPage() {
                         });
 
                         return edgeVars.length === 0 ? (
-                          <div className="text-xs text-muted-foreground">
-                            No edge variables defined
-                          </div>
+                          <div className="text-xs text-muted-foreground">{tUi("No edge variables defined")}</div>
                         ) : (
                           <div className="space-y-1">
                             {edgeVars.map((edgeVar, idx) => (
@@ -4352,11 +4289,10 @@ export default function FlowBuilderPage() {
                                     variant: "success",
                                   });
                                 }}
-                                title="Click to copy variable reference"
+                                title={tUi("Click to copy variable reference")}
                               >
                                 <div className="font-semibold">{`{{${edgeVar.name}}}`}</div>
-                                <div className="text-muted-foreground mt-1">
-                                  from: {edgeVar.source}
+                                <div className="text-muted-foreground mt-1">{tUi("from: ")}{edgeVar.source}
                                 </div>
                               </div>
                             ))}
@@ -4369,12 +4305,12 @@ export default function FlowBuilderPage() {
 
                     {/* Usage Tips */}
                     <div className="text-xs text-muted-foreground space-y-2 p-3 bg-muted/50 rounded">
-                      <p className="font-semibold">Usage Tips:</p>
+                      <p className="font-semibold">{tUi("Usage Tips:")}</p>
                       <ul className="list-disc list-inside space-y-1">
-                        <li>Click any variable to copy its reference</li>
-                        <li>Use {`{{global.varName}}`} for global variables</li>
-                        <li>Use {`{{varName}}`} for edge variables</li>
-                        <li>Use {`{{payload.field}}`} for webhook data</li>
+                        <li>{tUi("Click any variable to copy its reference")}</li>
+                        <li>{tUi("Use ")}{`{{global.varName}}`}{tUi(" for global variables")}</li>
+                        <li>{tUi("Use ")}{`{{varName}}`}{tUi(" for edge variables")}</li>
+                        <li>{tUi("Use ")}{`{{payload.field}}`}{tUi(" for webhook data")}</li>
                       </ul>
                     </div>
                   </div>
@@ -4385,23 +4321,19 @@ export default function FlowBuilderPage() {
         </CardContent>
       </Card>
 
+      {assistantDestination.dialog}
       <AlertDialog open={showExitDialog} onOpenChange={setShowExitDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
-            <AlertDialogDescription>
-              You have unsaved changes. Are you sure you want to leave? All
-              unsaved changes will be lost.
-            </AlertDialogDescription>
+            <AlertDialogTitle>{tUi("Unsaved Changes")}</AlertDialogTitle>
+            <AlertDialogDescription>{tUi("You have unsaved changes. Are you sure you want to leave? All unsaved changes will be lost.")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={cancelExit}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel onClick={cancelExit}>{tUi("Cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmExit}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Leave without saving
-            </AlertDialogAction>
+            >{tUi("Leave without saving")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -4410,51 +4342,35 @@ export default function FlowBuilderPage() {
       <AlertDialog open={showWebhookDialog} onOpenChange={setShowWebhookDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              Update Voice Application Webhook
-            </AlertDialogTitle>
+            <AlertDialogTitle>{tUi("Update Voice Application Webhook")}</AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-3">
-                <p>
-                  The webhook URL for{" "}
-                  <strong>{webhookUpdateInfo?.appName}</strong> needs to be
-                  updated to work with this flow.
-                </p>
+                <p>{tUi("The webhook URL for")}{" "}
+                  <strong>{webhookUpdateInfo?.appName}</strong>{tUi(" needs to be updated to work with this flow.")}</p>
 
                 <div className="rounded-lg border bg-muted p-3 space-y-2">
                   <div>
-                    <div className="text-xs font-semibold text-muted-foreground mb-1">
-                      Current Webhook URL:
-                    </div>
+                    <div className="text-xs font-semibold text-muted-foreground mb-1">{tUi("Current Webhook URL:")}</div>
                     <code className="text-xs break-all block bg-background p-2 rounded">
                       {webhookUpdateInfo?.currentUrl}
                     </code>
                   </div>
 
                   <div>
-                    <div className="text-xs font-semibold text-muted-foreground mb-1">
-                      New Webhook URL:
-                    </div>
+                    <div className="text-xs font-semibold text-muted-foreground mb-1">{tUi("New Webhook URL:")}</div>
                     <code className="text-xs break-all block bg-background p-2 rounded text-green-600 dark:text-green-400">
                       {webhookUpdateInfo?.newUrl}
                     </code>
                   </div>
                 </div>
 
-                <p className="text-sm">
-                  Would you like to update the voice application's webhook URL
-                  now?
-                </p>
+                <p className="text-sm">{tUi("Would you like to update the voice application's webhook URL now?")}</p>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={handleCancelWebhookUpdate}>
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={handleUpdateWebhook}>
-              Update Webhook URL
-            </AlertDialogAction>
+            <AlertDialogCancel onClick={handleCancelWebhookUpdate}>{tUi("Cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleUpdateWebhook}>{tUi("Update Webhook URL")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -4466,25 +4382,20 @@ export default function FlowBuilderPage() {
       >
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>Edit Flow Description</DialogTitle>
-            <DialogDescription>
-              Add a description for this call flow to help others understand its
-              purpose.
-            </DialogDescription>
+            <DialogTitle>{tUi("Edit Flow Description")}</DialogTitle>
+            <DialogDescription>{tUi("Add a description for this call flow to help others understand its purpose.")}</DialogDescription>
           </DialogHeader>
           <div className="py-4">
             <Textarea
               value={tempDescription}
               onChange={(e) => setTempDescription(e.target.value)}
-              placeholder="Enter flow description..."
+              placeholder={tUi("Enter flow description...")}
               className="min-h-[150px]"
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={handleCancelDescription}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveDescription}>Save Description</Button>
+            <Button variant="outline" onClick={handleCancelDescription}>{tUi("Cancel")}</Button>
+            <Button onClick={handleSaveDescription}>{tUi("Save Description")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -4497,7 +4408,7 @@ export default function FlowBuilderPage() {
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <IconActivity className="h-5 w-5" />
-                <h2 className="font-semibold text-lg">Call Monitor</h2>
+                <h2 className="font-semibold text-lg">{tUi("Call Monitor")}</h2>
               </div>
               <Button
                 variant="ghost"
@@ -4542,10 +4453,8 @@ export default function FlowBuilderPage() {
             {monitorData.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
                 <IconActivity className="h-12 w-12 mb-4 opacity-50" />
-                <p className="text-sm">No webhook events yet</p>
-                <p className="text-xs mt-1">
-                  Events will appear here when calls or form submits run
-                </p>
+                <p className="text-sm">{tUi("No webhook events yet")}</p>
+                <p className="text-xs mt-1">{tUi("Events will appear here when calls or form submits run")}</p>
               </div>
             ) : (
               <div className="space-y-2">
@@ -4657,12 +4566,8 @@ export default function FlowBuilderPage() {
         <SheetContent className="w-full sm:max-w-md overflow-y-auto">
           <SheetHeader className="pb-4">
             <SheetTitle className="flex items-center gap-2 text-lg">
-              <IconVariable className="h-4 w-4 text-telnyx-green" />
-              Manage Global Variables
-            </SheetTitle>
-            <SheetDescription className="text-sm">
-              Define variables accessible throughout the flow
-            </SheetDescription>
+              <IconVariable className="h-4 w-4 text-telnyx-green" />{tUi("Manage Global Variables")}</SheetTitle>
+            <SheetDescription className="text-sm">{tUi("Define variables accessible throughout the flow")}</SheetDescription>
           </SheetHeader>
 
           <div className="px-4 space-y-4">
@@ -4687,19 +4592,13 @@ export default function FlowBuilderPage() {
                   setHasUnsavedChanges(true);
                 }}
               >
-                <IconPlus className="h-3 w-3 mr-1" />
-                Add Variable
-              </Button>
+                <IconPlus className="h-3 w-3 mr-1" />{tUi("Add Variable")}</Button>
             </div>
 
             {/* Variable List */}
             {Object.keys(globalVariables).length === 0 ? (
-              <div className="text-center py-8 text-sm text-muted-foreground">
-                No global variables defined yet
-                <br />
-                <span className="text-xs mt-2 block">
-                  Click "Add Variable" above to create your first variable
-                </span>
+              <div className="text-center py-8 text-sm text-muted-foreground">{tUi("No global variables defined yet")}<br />
+                <span className="text-xs mt-2 block">{tUi("Click \"Add Variable\" above to create your first variable")}</span>
               </div>
             ) : (
               <div className="space-y-2">
@@ -4731,14 +4630,14 @@ export default function FlowBuilderPage() {
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <IconActivity className="h-5 w-5" />
-                <h2 className="font-semibold text-lg">Call Monitor</h2>
+                <h2 className="font-semibold text-lg">{tUi("Call Monitor")}</h2>
               </div>
               <div className="flex items-center gap-1">
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={handleClearMonitor}
-                  title="Clear monitor data"
+                  title={tUi("Clear monitor data")}
                 >
                   <IconTrash className="h-4 w-4" />
                 </Button>
@@ -4790,11 +4689,8 @@ export default function FlowBuilderPage() {
             {monitorData.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
                 <IconActivity className="h-12 w-12 mb-4 opacity-50" />
-                <p className="text-sm">No webhook events yet</p>
-                <p className="text-xs mt-1">
-                  Events will appear here when calls or form submits run for
-                  this flow
-                </p>
+                <p className="text-sm">{tUi("No webhook events yet")}</p>
+                <p className="text-xs mt-1">{tUi("Events will appear here when calls or form submits run for this flow")}</p>
               </div>
             ) : (
               <div className="space-y-2">

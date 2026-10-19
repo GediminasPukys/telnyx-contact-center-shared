@@ -1,7 +1,7 @@
 # Telnyx Contact Center
 
 <!-- app-version:start -->
-[![Version 1.8.0](https://img.shields.io/badge/version-1.8.0-00C389)](https://github.com/team-telnyx/telnyx-contact-center-shared/releases)
+[![Version 1.10.0](https://img.shields.io/badge/version-1.10.0-00C389)](https://github.com/team-telnyx/telnyx-contact-center-shared/releases)
 <!-- app-version:end -->
 
 [Release history](https://github.com/team-telnyx/telnyx-contact-center-shared/releases) · [Changelog](CHANGELOG.md) · Versioning and release process
@@ -23,6 +23,7 @@ A Next.js 16 application providing a contact center solution built on Telnyx API
 - **Real-Time Monitoring**: Live agent status, queue metrics, and call tracking
 - **Call Recording & Transcription**: Built-in recording and transcription capabilities
 - **AI Integration**: Telnyx AI assistant integration for call analysis and assistance
+- **Video AI and Vision**: Video-room assistants with optional Telnyx avatars, image uploads and consent-based camera/screen analysis, included in the application runtime
 
 ### User Features
 
@@ -53,7 +54,9 @@ A Next.js 16 application providing a contact center solution built on Telnyx API
 
 ### Prerequisites
 
-- Node.js 22.3+
+- Node.js 22.12+ (Node.js 24 LTS recommended). This is the minimum already
+  required by Puppeteer in 1.9.0; the earlier 22.3 README prerequisite was
+  inaccurate. Babel tooling remains on the compatible 7.x line.
 - PostgreSQL
 - Yarn package manager
 
@@ -101,6 +104,29 @@ yarn dev
 ```
 
 The application will be available at `http://localhost:3000`.
+
+### Voice connection requirements
+
+The agents' **WebRTC credential connection** needs `outbound.call_parking_enabled`
+set to `true`. Contact Center owns the PSTN dial and bridge; without parking,
+a manually created connection can dial the destination a second time. Its
+`webhook_event_url` must be `https://YOUR-CC-HOST/api/voice/webhook`, with webhook
+API version `2`. Agent-leg events use this credential connection's webhook,
+not only the Call Control application's webhook. Configure both connections.
+The deployment wizard applies these settings on creation and repairs them on
+subsequent Telnyx configuration runs.
+
+Keep the main service number (`TELNYX_MAIN_FROM_NUMBER`) on its inbound
+application/flow. Assign a separate personal DID explicitly in a user's profile
+only when direct calls to that agent are intended. The owner seed no longer
+copies the main number into `users.voice_number`; older assignments of that
+same main number cannot override service-number routing.
+
+On first login, choose **Computer** or a reachable mobile device in the phone
+status menu. **Available** is the agent's requested status; incoming voice calls
+also require a selected, ready device. Until then, the phone badge says
+**Choose a device** and opens the device picker. The application does not
+silently change an agent's selected computer or mobile device.
 
 ## Deployment wizard (`./deploy/cc`)
 
@@ -166,6 +192,23 @@ The deployment script handles building the Docker image, starting PostgreSQL and
 - **Health checks** — both PostgreSQL and the application have Docker health checks
 
 See [`docker/README.md`](docker/README.md) for detailed configuration, manual deployment, logs, and troubleshooting.
+
+### Enable Video AI and Vision
+
+Follow the **[Video AI and Vision deployment guide](deploy/README.md#video-ai-and-vision)** for both new installations and upgrades. It covers instance settings, assistant/model compatibility, widget publication, source consent and a live verification checklist.
+
+Current single-node Compose and deployment-wizard installations include Chromium,
+its sandbox policy, private recording storage and a 60-second shutdown grace period
+in the app deployment. No separate Video AI container is required. Existing custom
+deployments must update their container creation settings as well as the image;
+`.env` changes alone cannot apply Docker security options or mounts.
+
+After deployment, configure **Web Widgets → Video**, choose the assistant and
+Vision mode, and **Publish**. AI chat images have a separate **Allow images in AI
+chat** setting. For multiple application hosts, follow the guide's
+[HA prerequisites](deploy/README.md#video-ai-and-vision):
+Video AI is disabled by default in the HA wizard and requires private relay
+connectivity and a shared recording filesystem.
 
 ### Environment variables
 

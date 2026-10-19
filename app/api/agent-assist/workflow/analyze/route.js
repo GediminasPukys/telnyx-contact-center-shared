@@ -566,7 +566,7 @@ async function analyzeOneUtterance({
   if (speakerType === "customer" && BARE_YES_NO_RE.test(transcript.trim())) {
     const lastAgentContext = [...recentContextEntries]
       .reverse()
-      .find((e) => e?.text && String(e.speaker || "").toLowerCase() !== "inbound");
+      .find((e) => e?.text && normalizeSpeakerType(e.speaker) === "agent");
     const questionText = String(lastAgentContext?.text || "").toLowerCase();
     if (questionText) {
       const questionedBoolean = pendingItems.find((i) => {
@@ -2179,8 +2179,9 @@ async function POST_handler(request) {
       `SELECT llm_model, llm_fallback_model, llm_confidence_threshold, llm_reasoning_enabled, llm_max_output_tokens FROM aa_workflows WHERE id = $1`,
       [workflowSession.workflow_id]
     );
-    const llmModel = workflow?.llm_model || "openai/gpt-4o";
-    const fallbackModel = workflow?.llm_fallback_model || "openai/gpt-5.6-luna";
+    // Workflow model (optional override) > Admin → AI Copilot "Workflow analysis" > built-in default.
+    const llmModel = workflow?.llm_model || undefined;
+    const fallbackModel = workflow?.llm_fallback_model || null;
     const reasoningEnabled = workflow?.llm_reasoning_enabled === true;
     const maxOutputTokens = Number.isInteger(workflow?.llm_max_output_tokens)
       ? workflow.llm_max_output_tokens

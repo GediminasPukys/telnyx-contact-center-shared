@@ -130,6 +130,7 @@ export function buildEnvValues({ sampleKeys, answers, target = 'local', postgres
     APP_ENV: 'production',
     NODE_ENV: 'production',
     APP_HOSTNAME: '0.0.0.0',
+    VIDEO_AI_WORKER_CAPACITY: '2',
     ALLOWED_ORIGINS: baseUrl,
     ALLOWED_DEV_ORIGINS: host,
     NEXT_PUBLIC_BASE_URL: baseUrl,
@@ -174,6 +175,10 @@ export function buildEnvValues({ sampleKeys, answers, target = 'local', postgres
     // target) also leaves this blank — the user's own Postgres may or may
     // not enforce TLS; they can set POSTGRES_SSL by hand in that case.
     POSTGRES_SSL: '',
+    POSTGRES_QUERY_TIMEOUT_MS: '35000',
+    POSTGRES_KEEPALIVE_DELAY_MS: '10000',
+    POSTGRES_MAX_LIFETIME_SECONDS: '300',
+    POSTGRES_HEALTH_TIMEOUT_MS: '2500',
     // compose v2 picks up COMPOSE_PROFILES from the environment, so a single env var
     // is enough to suppress the bundled Postgres container.
     COMPOSE_PROFILES: mode === 'existing' ? 'no-with-pg' : 'with-pg',
@@ -249,6 +254,9 @@ export function buildEnvValues({ sampleKeys, answers, target = 'local', postgres
     // browser bundle, so an operator who wants it sets it in .env before
     // "docker compose build" — the wizard never asks for it.
     GOOGLE_MAPS_KEY: '',
+    // Optional Android alerts; each deployment supplies its own Firebase project and key.
+    FCM_PROJECT_ID: '',
+    FCM_SERVICE_ACCOUNT_JSON: '',
     TELNYX_PHONE_ADMIN_PASSWORD: '',
     TELNYX_HARDPHONE_WEBHOOK_URL: '',
     SECRETS_ENCRYPTION_KEY: randomHexSecret(32),
