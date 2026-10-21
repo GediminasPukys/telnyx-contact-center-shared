@@ -1,6 +1,6 @@
 {
   "name": "telnyx-contact-center",
-  "version": "1.10.0",
+  "version": "1.11.0",
   "private": true,
   "scripts": {
     "dev": "node scripts/start-next-with-pino.mjs dev --webpack",
@@ -126,7 +126,7 @@
     "reactflow": "^11.11.4",
     "recharts": "^3.10.1",
     "remark-gfm": "^4.0.1",
-    "sanitize-html": "2.18.0",
+    "sanitize-html": "2.18.1",
     "sharp": "0.35.5",
     "tailwind-merge": "^3.7.0",
     "tweetnacl": "^1.0.3",
@@ -166,6 +166,7 @@
     "typescript": "^5.9.3"
   },
   "resolutions": {
+    "@tailwindcss/node/lightningcss": "1.33.0",
     "uuid": "11.1.1"
   },
   "packageManager": "yarn@4.9.2+sha512.1fc009bc09d13cfd0e19efa44cbfc2b9cf6ca61482725eb35bbc5e257e093ebf4130db6dfe15d604ff4b79efd8e1e8e99b25fa7d0a6197c9f9826358d4d65c3c",

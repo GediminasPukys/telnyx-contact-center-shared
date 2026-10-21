@@ -280,6 +280,29 @@ test("hold intents validate the live agent leg and use one server-timestamped tr
   assert.equal(leg.rows[0].state, "bridged");
 });
 
+test("direct inbound SIP hold records the owned agent leg without requiring a customer media leg", async () => {
+  const agentId = randomUUID(); await seedAgent(pool, agentId);
+  const call = await coreCall({ agentId }), provider = makeFakeProvider();
+  await pool.query("DELETE FROM acd_legs WHERE id=$1", [call.customerLegId]);
+  await pool.query("UPDATE acd_work_items SET attributes=$2::jsonb WHERE id=$1", [call.workItemId,
+    JSON.stringify({ voice_occupancy_kind: "direct_inbound", direct_agent_id: agentId })]);
+  const held = await recordHoldIntent(pool, { interactionId: call.workItemId, agentId, action: "hold", provider });
+  assert.equal(held.state, "held"); assert.equal(held.sagaId, null);
+  assert.equal((await pool.query("SELECT state FROM acd_legs WHERE id=$1", [call.agentLegId])).rows[0].state, "held");
+  const resumed = await recordHoldIntent(pool, { interactionId: call.workItemId, agentId, action: "unhold", provider });
+  assert.equal(resumed.state, "active"); assert.deepEqual(provider.calls, []);
+  await assert.rejects(recordHoldIntent(pool, { interactionId: call.workItemId, agentId: randomUUID(), action: "hold", provider }), { status: 403 });
+});
+
+test("routed call hold still rejects a missing customer leg and rolls back its state", async () => {
+  const agentId = randomUUID(); await seedAgent(pool, agentId);
+  const call = await coreCall({ agentId });
+  await pool.query("DELETE FROM acd_legs WHERE id=$1", [call.customerLegId]);
+  await assert.rejects(recordHoldIntent(pool, { interactionId: call.workItemId, agentId, action: "hold", provider: makeFakeProvider() }), /Live customer leg unavailable/);
+  assert.equal((await pool.query("SELECT state FROM acd_legs WHERE id=$1", [call.agentLegId])).rows[0].state, "bridged");
+  assert.equal((await pool.query("SELECT id FROM acd_events WHERE work_item_id=$1 AND type='hold_started'", [call.workItemId])).rowCount, 0);
+});
+
 test("agent hold plays configured customer media and stops it on unhold", async () => {
   const agentId = randomUUID();
   await seedAgent(pool, agentId);

@@ -9,10 +9,10 @@ test("answering a routed WebRTC call remains a browser-side WebRTC action", asyn
   for (const path of ["components/softphone.jsx", "components/softphone-mini.jsx"]) {
     const source = await read(path);
     const answerHandler = source.match(
-      /function handleAnswerCall\(\)[\s\S]*?\n  }\n/,
+      /(?:async )?function handleAnswerCall\(\)[\s\S]*?\n  }\n/,
     )?.[0];
     assert.ok(answerHandler, `${path} must expose the WebRTC answer handler`);
-    assert.match(answerHandler, /activeCall\.answer\?\.\(\)/);
+    assert.match(answerHandler, /activeCall\.answer(?:\?\.)?\(\)/);
     assert.doesNotMatch(
       answerHandler,
       /\/api\/contact-center\/interactions\/.*\/answer/,
@@ -110,6 +110,7 @@ test("consult calls from TransferModal attach audio with helpers the softphone d
       [...handler.matchAll(/\b([A-Za-z_$][\w$]*)\(/g)].map((match) => match[1]),
     );
     called.delete("setTimeout");
+    called.delete("for");
     assert.ok(called.size > 0, `${path} consult handler must wire the consult call`);
     for (const name of called) {
       assert.match(
@@ -125,7 +126,10 @@ test("consult calls from TransferModal attach audio with helpers the softphone d
   const softphone = await read("components/softphone.jsx");
   assert.match(
     softphone,
-    /const hydrateRemoteAudio = useCallback\(\(targetCall\) => \{\s*try \{\s*const call = targetCall \|\| activeCall;/,
+    /const hydrateRemoteAudio = useCallback\(\(targetCall\) => \{[\s\S]*?new CustomEvent\("softphone:attach-audio", \{ detail: \{ call: targetCall \|\| useActiveCallStore.getState\(\).call \} \}\)/,
   );
+  const mini = await read("components/softphone-mini.jsx");
+  assert.match(mini, /const attach = event => attachAudio\(event.detail\?\.call \|\| useActiveCallStore.getState\(\).call\)/);
+  assert.match(mini, /addEventListener\("softphone:attach-audio", attach\)/);
   assert.match(softphone, /setTimeout\(\(\) => hydrateRemoteAudio\(call\), delay\)/);
 });

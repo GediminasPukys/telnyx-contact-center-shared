@@ -1,0 +1,7 @@
+:root{color-scheme:dark;font-family:system-ui;color:#eee;background:#111}
+body{margin:24px}header,.row{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.brand{display:block;width:150px;height:auto;max-height:42px;object-fit:contain}.badge{font-size:10px;letter-spacing:1px;color:#00d6ac;border:1px solid #28564d;padding:5px 8px;border-radius:6px}
+h1{font-size:22px;margin:24px 0 8px}p,footer{font-size:12px;color:#aaa;line-height:1.5}
+section{background:#191919;border:1px solid #303030;border-radius:12px;padding:14px;margin:12px 0}
+.row{font-size:13px;margin:4px 0}.muted{color:#aaa}.good{color:#00d6ac}code{font-size:12px}
+#error{color:#fbbf24}footer{margin-top:20px}.skeleton{height:30px;opacity:.5}

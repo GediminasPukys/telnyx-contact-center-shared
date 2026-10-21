@@ -128,6 +128,7 @@ async function POST_handler(_request, _context, authz) {
     const managed = (await getPostgresPool().query("SELECT 1 FROM cc_agent_voice_preferences WHERE agent_id=$1",[String(user.id)])).rowCount;
     if (managed || endpointToken) {
       const endpoint = await authenticateVoiceEndpoint(getPostgresPool(), user, endpointToken);
+      if (endpoint.credential_owned === false) return NextResponse.json({ error: "The selected station does not use a browser voice token." }, { status: 409 });
       try { return NextResponse.json({ token: await createAccessToken(telnyxApiKey, endpoint.credential_id) }); }
       catch (error) {
         if (error.code !== 'CREDENTIAL_EXPIRED') throw error;

@@ -1,0 +1,31 @@
+{
+  "name": "contact-center-desktop-prototype",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Isolated Electron shell and outbound CTI bridge for Contact Center",
+  "main": "main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test ../../tests/desktop-auth-main.test.mjs ../../tests/desktop-browser-auth.test.mjs ../../tests/desktop-bridge.test.mjs ../../tests/desktop-native-bridge.test.mjs ../../tests/desktop-discovery.test.mjs ../../tests/desktop-activation.test.mjs ../../tests/desktop-headset-permissions.test.mjs ../../tests/desktop-environments.test.mjs ../../tests/desktop-mac-identity.test.mjs ../../tests/desktop-navigation.test.mjs ../../tests/desktop-package.test.mjs",
+    "package:mac": "node package-mac.mjs",
+    "package:mac:dist": "node package-mac.mjs --installers",
+    "package:win": "node package-win.mjs",
+    "package:win:dist": "node package-win.mjs --installers"
+  },
+  "dependencies": {
+    "ws": "8.22.0"
+  },
+  "devDependencies": {
+    "@electron/osx-sign": "^2.7.1",
+    "@electron/packager": "^20.0.0",
+    "electron": "44.9.2",
+    "electron-builder": "26.15.3",
+    "esbuild": "^0.28.2"
+  },
+  "productName": "Telnyx Contact Center",
+  "overrides": {
+    "@electron/get@3.1.0": {
+      "global-agent": "4.1.3"
+    }
+  }
+}

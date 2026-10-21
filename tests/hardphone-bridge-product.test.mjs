@@ -9,12 +9,12 @@ async function file(path) {
 
 describe("hardphone bridge product integration", () => {
   it("derives Telnyx-safe hardphone SIP usernames from MAC addresses", () => {
-    assert.strictEqual(phoneConnectionUserName("00:90:8F:56:10:A5"), "phone00908F5610A5");
-    assert.strictEqual(phoneConnectionUserName("00908f5610a5"), "phone00908F5610A5");
+    assert.strictEqual(phoneConnectionUserName("00:90:8F:00:00:01"), "phone00908F000001");
+    assert.strictEqual(phoneConnectionUserName("00908f000001"), "phone00908F000001");
     assert.strictEqual(phoneConnectionUserName("A0:90:8F:56:10:A5"), "phoneA0908F5610A5");
     assert.doesNotThrow(() => phoneConnectionUserName("A0908F5610A5"));
-    assert.strictEqual(phoneConnectionUserName("hp00908F5610A5"), "phone00908F5610A5");
-    assert.strictEqual(phoneConnectionUserName("phone00908F5610A5"), "phone00908F5610A5");
+    assert.strictEqual(phoneConnectionUserName("hp00908F000001"), "phone00908F000001");
+    assert.strictEqual(phoneConnectionUserName("phone00908F000001"), "phone00908F000001");
   });
 
   it("rejects Telnyx SIP connections when username repair does not persist", async () => {
@@ -127,24 +127,24 @@ describe("hardphone bridge product integration", () => {
     assert.doesNotMatch(page, /<Label>Label<\/Label>/);
     assert.match(page, /\{p\.phone_name \|\| p\.label \|\| formatMacDisplay\(p\.mac\)\}/);
     assert.match(page, /placeholder="Desk phone \/ Reception"/);
-    assert.match(page, /placeholder="Line 1 \/ Agent name"/);
+    assert.match(page, /placeholder=\{phone\?\.extension \|\| "Line 1 \/ Agent name"\}/);
   });
 
-  it("shows the assigned Telnyx phone number as its own phone inventory column", async () => {
+  it("shows only the assigned internal extension in the phone inventory", async () => {
     const page = await file("app/(portal)/admin/phones-provisioning/page.jsx");
-    assert.match(page, /<span>Phone number<\/span>/);
-    assert.match(page, /p\.assigned_phone_number \|\| "—"/);
+    assert.match(page, />Extension<\/th>/);
+    assert.match(page, /data-testid="phone-extension"[\s\S]*?\{p\.extension\}<\/Badge> : null/);
+    assert.match(page, />DID<\/th>/);
+    assert.match(page, /data-testid="phone-did"[^>]*>\{p\.assigned_phone_number \|\| ""\}/);
     assert.match(page, /font-mono text-xs/);
   });
 
   it("renders vendor logos instead of text badges in phone lists", async () => {
     const page = await file("app/(portal)/admin/phones-provisioning/page.jsx");
-    assert.match(page, /const VENDOR_LOGOS = \{/);
-    assert.match(page, /polycom: "\/images\/hardphones\/logos\/polycom\.jpg"/);
-    assert.match(page, /yealink: "\/images\/hardphones\/logos\/yealink\.jpg"/);
-    assert.match(page, /audiocodes: "\/images\/hardphones\/logos\/audiocodes\.jpg"/);
-    assert.match(page, /function VendorLogoBadge\(\{ vendor, count \}\)/);
-    assert.match(page, /<VendorLogoBadge vendor=\{p\.vendor\} \/>/);
+    const badge = await file("components/telephony/PhoneVendorBadge.jsx");
+    for (const vendor of ["polycom","yealink","audiocodes"]) assert.match(badge,new RegExp(`image:"${vendor}"`));
+    assert.match(badge, /\/images\/hardphones\/logos\/\$\{brand.image\}\.jpg/);
+    assert.match(page, /<PhoneVendorBadge vendor=\{p\.vendor\} compact \/>/);
     assert.doesNotMatch(page, /<Badge variant="outline" className=\{vendorBadgeClass\(p\.vendor\)\}>\{p\.vendor\}<\/Badge>/);
   });
 
@@ -153,21 +153,13 @@ describe("hardphone bridge product integration", () => {
     const itemRoute = await file("app/api/admin/phones-provisioning/phones/[id]/route.js");
     const listRoute = await file("app/api/admin/phones-provisioning/phones/route.js");
     const credentials = await file("lib/hardphones/credentials.mjs");
-    assert.match(page, /const \[numberChangeOpen, setNumberChangeOpen\] = useState\(false\)/);
-    assert.match(page, /data-testid="hp-phone-number-readonly"/);
-    assert.match(page, /data-testid="hp-phone-number-change"/);
-    assert.match(page, /size="icon" className="h-9 w-9 shrink-0"/);
-    assert.match(page, /aria-label="Change Telnyx number"/);
-    assert.match(page, /<div className="mt-1 flex items-center gap-2">/);
-    assert.match(page, /<div className="min-w-0 flex-1">/);
-    assert.match(page, /setNumberChangeOpen\(true\)/);
-    assert.match(page, /data-testid="hp-phone-number-select"/);
-    assert.match(page, /numberOptions/);
+    assert.match(page, /<OutboundNumberSelect id="hp-phone-number-select" endpoint="\/api\/admin\/phones-provisioning\/number-options"/);
+    assert.match(page, /onChange=\{\(id, number\) => update\(\{ assigned_phone_number_id: id, assigned_phone_number: number \}\)\}/);
     assert.doesNotMatch(page, /!editing \? \(\s*<div className="rounded-xl border bg-muted\/20 p-3">\s*<Label>Telnyx number<\/Label>/);
     assert.match(itemRoute, /assigned_phone_number_id !== undefined/);
-    assert.match(itemRoute, /assignPhoneNumberToConnection\(nextNumberId, connectionId\)/);
-    assert.match(itemRoute, /unassignPhoneNumberFromConnection\(currentNumberId\)/);
-    assert.match(itemRoute, /updatePhoneSipConnectionCallerId\(\{ connectionId, phoneNumber: numberValue \}\)/);
+    assert.match(itemRoute, /await ownedVoiceNumber\(nextNumberId\)/);
+    assert.doesNotMatch(itemRoute, /(?:assignPhoneNumberToConnection|unassignPhoneNumberFromConnection)\(/);
+    assert.match(itemRoute, /clearPhoneSipConnectionCallerId\(\{ connectionId \}\)/);
     assert.match(listRoute, /syncHardphonePhoneNumbersFromTelnyx\(pool, rows\)/);
     assert.match(listRoute, /syncHardphoneRegistrationStatusesFromTelnyx\(pool, syncedRows\)/);
     assert.match(credentials, /export async function unassignPhoneNumberFromConnection/);
@@ -198,13 +190,11 @@ describe("hardphone bridge product integration", () => {
     assert.match(credentials, /actions\/check_registration_status/);
   });
 
-  it("persists phone IP and SIP registration from provisioning callbacks", async () => {
+  it("leaves inventory addresses unchanged on config fetch and processes registration callbacks separately", async () => {
     const provisioningRoute = await file("app/api/provisioning/[filename]/route.js");
     const eventsRoute = await file("app/api/provisioning/events/[vendor]/route.js");
-    assert.match(provisioningRoute, /trustedPhoneSourceIp\(request\)/);
-    assert.match(provisioningRoute, /last_ip = COALESCE\(\$3, last_ip\)/);
-    assert.match(provisioningRoute, /ip_address = COALESCE\(NULLIF\(ip_address, ''\), \$3, ip_address\)/);
-    assert.match(provisioningRoute, /detectedIp: phoneSourceIp/);
+    assert.doesNotMatch(provisioningRoute, /last_ip\s*=|ip_address\s*=/);
+    assert.match(provisioningRoute, /authorizeProvisioning\(request\.headers\.get\("authorization"\), phone, enrollment\)/);
     assert.match(eventsRoute, /sip_registration_status = COALESCE\(\$3, sip_registration_status\)/);
     assert.match(eventsRoute, /sip_registration_status_at = CASE WHEN \$3::text IS NULL THEN sip_registration_status_at ELSE NOW\(\) END/);
     assert.match(eventsRoute, /ip_address = COALESCE\(NULLIF\(ip_address, ''\), \$2, ip_address\)/);
@@ -229,7 +219,7 @@ describe("hardphone bridge product integration", () => {
     assert.match(page, /replace\(\/\[\^0-9a-f\]\/g, ""\)\.slice\(0, 12\)/);
     assert.match(page, /value=\{formatMacInput\(draft\.mac\)\}/);
     assert.match(page, /onChange=\{\(e\) => update\(\{ mac: formatMacInput\(e\.target\.value\) \}\)\}/);
-    assert.match(page, /placeholder="00:90:8f:56:10:a5"/);
+    assert.match(page, /placeholder="00:90:8f:00:00:01"/);
   });
 
   it("auto-discovers phone IP and keeps the phone IP field read-only", async () => {
@@ -269,7 +259,7 @@ describe("hardphone bridge product integration", () => {
     assert.match(bridgeRelay, /message\.RegistrationStatus/);
     assert.match(bridgeRelay, /phone_registry_request/);
     assert.match(bridgeRelay, /phone_registry/);
-    assert.match(bridgeRelay, /FROM hp_phones[\s\S]*WHERE local_bridge_id = \$1/);
+    assert.match(bridgeRelay, /FROM hp_phones p[\s\S]*WHERE p\.local_bridge_id = \$1/);
     assert.match(page, /Telnyx registration/);
     assert.match(page, /registrationBadgeClass/);
     assert.match(page, /function registrationBadgeLabel/);
@@ -304,8 +294,8 @@ describe("hardphone bridge product integration", () => {
     assert.match(credentials, /buildTelnyxV2Url\("\/credential_connections"\)/);
     assert.match(credentials, /sip_uri_calling_preference: "unrestricted"/);
     assert.match(credentials, /outbound_voice_profile_id: outboundVoiceProfileId/);
-    assert.match(credentials, /ani_override_type: "always"/);
-    assert.match(credentials, /updatePhoneSipConnectionCallerId/);
+    assert.doesNotMatch(credentials, /ani_override_type: "always"/);
+    assert.match(credentials, /clearPhoneSipConnectionCallerId/);
     assert.match(credentials, /buildTelnyxV2Url\(`\/phone_numbers\/\$\{encodeURIComponent\(phoneNumberId\)\}`\)/);
   });
 
@@ -399,7 +389,7 @@ describe("hardphone bridge product integration", () => {
     const page = await file("app/(portal)/admin/phones-provisioning/page.jsx");
     assert.match(page, /phoneAdminPasswordConfigured/);
     assert.match(page, /TELNYX_PHONE_ADMIN_PASSWORD/);
-    assert.match(page, /Select a Telnyx number/);
+    assert.match(await file("components/queues/OutboundNumberSelect.jsx"), /Search Telnyx numbers/);
     assert.doesNotMatch(page, /Select a Telnyx number that is not attached to any connection/);
     assert.doesNotMatch(page, /Saving creates a dedicated Telnyx SIP connection for this phone automatically/);
     assert.doesNotMatch(page, /<Label>Admin password<\/Label>/);

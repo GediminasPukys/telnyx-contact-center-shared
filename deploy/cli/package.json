@@ -19,5 +19,8 @@
     "chalk": "^6.0.1",
     "node-forge": "^1.4.0",
     "pg": "^8.23.1"
+  },
+  "overrides": {
+    "follow-redirects": "^1.16.1"
   }
 }

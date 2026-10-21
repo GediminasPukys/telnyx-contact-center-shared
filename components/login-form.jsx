@@ -10,7 +10,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { notify } from "@/components/ToastNotify";
 import { signIn } from "next-auth/react";
 import { useAuth } from "@/components/auth-provider";
-import { useRouter } from "next/navigation";
+
 import { IconBrandGoogleFilled } from "@tabler/icons-react";
 
 const subscribeToHydration = () => () => {};
@@ -25,7 +25,8 @@ export function LoginForm({ className, ...props }) {
   const [error, setError] = useState(null);
   const handledRef = useRef(false);
   const { refresh } = useAuth();
-  const router = useRouter();
+  const [desktopStatus, setDesktopStatus] = useState("");
+  const [desktopCode, setDesktopCode] = useState(""); // Older installed clients.
 
   useEffect(() => {
     try {
@@ -48,7 +49,7 @@ export function LoginForm({ className, ...props }) {
     console.log("[LOGIN] Error:", error);
     notify({
       title: "Login failed",
-      description: "Invalid credentials",
+      description: error === "CredentialsSignin" ? "Invalid credentials" : error,
       variant: "error",
       autoCloseMs: 2000,
     });
@@ -67,7 +68,7 @@ export function LoginForm({ className, ...props }) {
       const res = await signIn("credentials", {
         username,
         password,
-        callbackUrl: "/",
+        callbackUrl: "/signin/phone",
         redirect: false,
       });
       console.log("[LOGIN] Response:", res);
@@ -89,9 +90,9 @@ export function LoginForm({ className, ...props }) {
         try {
           refresh?.();
         } catch (_) {}
-        const target = res?.url || "/";
-        console.log("[LOGIN] Navigating to:", target);
-        router.replace(target);
+        // Keep the session on this origin (a local Electron deployment may
+        // have a different public OAuth callback URL behind its tunnel).
+        window.location.replace("/signin/phone");
       } else {
         setError("Invalid credentials");
       }
@@ -156,18 +157,36 @@ export function LoginForm({ className, ...props }) {
           variant="outline"
           className="w-full"
           disabled={submitting || oauthSubmitting}
-          onClick={(e) => {
+          onClick={async (e) => {
             e.preventDefault();
             if (submitting || oauthSubmitting) return;
             setOauthSubmitting(true);
             try {
               localStorage.removeItem("nav-main.selected");
             } catch (_) {}
-            signIn("google", { callbackUrl: "/" });
+            if (window.contactCenterDesktop?.signInGoogle) {
+              const desktop = window.contactCenterDesktop;
+              const unsubscribe = desktop.onSignInStatus?.(setDesktopStatus) || desktop.onSignInCode?.(setDesktopCode) || (() => {});
+              setDesktopStatus("browser");
+              setError(null);
+              try {
+                const result = await desktop.signInGoogle();
+                if (result?.ok === false) {
+                  if (result.error !== "cancelled") setError(result.error === "expired" ? "Sign-in expired. Try again." : "Desktop sign-in was not completed. Try again.");
+                } else if (!desktop.onSignInStatus) window.location.replace("/signin/phone");
+              }
+              catch { setError("Desktop sign-in was not completed. Try again."); }
+              finally { unsubscribe(); setDesktopCode(""); setDesktopStatus(""); setOauthSubmitting(false); }
+            } else signIn("google", { callbackUrl: "/signin/phone" });
           }}
         >
           <IconBrandGoogleFilled className="mr-2 h-5 w-5" aria-hidden="true" />{tUi("Continue with Google")}</Button>
       </div>
+      {desktopCode ? <p role="status" className="rounded-lg border p-3 text-center text-sm">{tUi("Complete sign-in in your browser. Confirm this code:")} <strong className="font-mono">{desktopCode}</strong></p> : null}
+      {desktopStatus && !desktopCode ? <div className="rounded-lg border p-3 text-center text-sm space-y-3">
+        <p role="status">{desktopStatus === "completing" ? tUi("Completing sign-in...") : tUi("Continue in your browser. This app will open automatically after sign-in.")}</p>
+        <Button type="button" variant="outline" onClick={() => window.contactCenterDesktop.cancelSignIn?.()}>{tUi("Cancel")}</Button>
+      </div> : null}
       <div className="text-center text-sm">{tUi("Don't have an account?")}{" "}
         <a href="/signup" className="underline underline-offset-4">{tUi("Sign up")}</a>
       </div>

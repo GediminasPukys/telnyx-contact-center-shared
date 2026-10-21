@@ -67,10 +67,10 @@ test("Phones Provisioning UI and admin APIs require experimental access", async 
   }
 });
 
-test("WebRTC headset state, UI, and command handling require experimental access", async () => {
+test("WebRTC headset state, UI, and commands require runtime headset entitlement", async () => {
   const mini = await read("components/softphone-mini.jsx");
-
-  assert.match(mini, /experimentalFeaturesEnabled \? <HeadsetStatusBadge \/> : null/);
-  assert.match(mini, /if \(!experimentalFeaturesEnabled\) return;[\s\S]*initHeadsetControlService/);
-  assert.match(mini, /if \(!experimentalFeaturesEnabled\) return;[\s\S]*onCommand/);
+  assert.match(mini, /headsetEnabled \? <HeadsetStatusBadge \/> : null/);
+  assert.match(mini, /if \(!headsetEnabled\) return;[\s\S]*startHeadsetSession/);
+  assert.match(mini, /if \(!headsetEnabled\) return;[\s\S]*onCommand/);
+  assert.match(await read("lib/headsets/policy.mjs"), /headset_controls_enabled \?\? user.experimental_features/);
 });

@@ -7,6 +7,7 @@ import {
   vendorFromUserAgent,
 } from "@/lib/hardphones/config-generators.mjs";
 import { recordProvisioningEvent, phoneProvisioningLogger } from "@/lib/hardphones/logging.mjs";
+import { authorizeProvisioning, getProvisioningEnrollment, provisioningEventToken, provisioningCredentials } from "@/lib/hardphones/provisioning-access.mjs";
 
 export const dynamic = "force-dynamic";
 
@@ -46,27 +47,10 @@ function requestSourceIp(request) {
   return fwd.split(",")[0].trim() || request.headers.get("x-real-ip") || null;
 }
 
-function isPrivatePhoneIp(value) {
-  const parts = String(value || "").split(".").map((part) => Number(part));
-  if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return false;
-  const [a, b] = parts;
-  return a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 169 && b === 254);
-}
-
-function isLikelyGatewayIp(value) {
-  const parts = String(value || "").split(".").map((part) => Number(part));
-  return parts.length === 4 && (parts[3] === 1 || parts[3] === 254);
-}
-
-function trustedPhoneSourceIp(request) {
-  const sourceIp = requestSourceIp(request);
-  return isPrivatePhoneIp(sourceIp) && !isLikelyGatewayIp(sourceIp) ? sourceIp : null;
-}
-
-// GET /api/provisioning/[filename] — public zero-touch provisioning endpoint.
+// GET /api/provisioning/[filename] — device provisioning endpoint.
 // Phones fetch their config files here at boot (DHCP option 66/160 or vendor
 // redirect service points at https://<host>/api/provisioning/). Unknown MACs
-// get 404 and are logged — only inventoried phones are served credentials.
+// get 404 and are logged. Every vendor requires a per-device Basic credential.
 export async function GET(request, { params }) {
   const pool = getPostgresPool();
   if (!pool) return new NextResponse("Server not ready", { status: 500 });
@@ -98,7 +82,7 @@ export async function GET(request, { params }) {
 
   const mac = resolved.mac;
   const { rows } = await pool.query(
-    `SELECT id, mac, vendor, model, label, assigned_phone_number_id, assigned_phone_number, sip_username, sip_password, admin_password, settings, provisioning_state
+    `SELECT id, mac, vendor, model, phone_name, label, assigned_phone_number_id, assigned_phone_number, sip_username, sip_password, admin_password, settings, provisioning_state
      FROM hp_phones WHERE mac = $1`,
     [mac],
   );
@@ -113,31 +97,48 @@ export async function GET(request, { params }) {
     return new NextResponse("Not found", { status: 404 });
   }
 
-  // Preserve the resolved file kind so Polycom <mac>-phone.cfg receives the
-  // registration/device XML while <mac>.cfg still receives the master file.
+  const enrollment = await getProvisioningEnrollment(pool, phone.id);
+  if (!authorizeProvisioning(request.headers.get("authorization"), phone, enrollment)) {
+    return new NextResponse("Device authentication required", {
+      status: 401, headers: { "WWW-Authenticate": 'Basic realm="CC provisioning"', "Cache-Control": "no-store" },
+    });
+  }
+
+  const assignment = (await pool.query(`SELECT a.number FROM cc_extension_assignments a
+    JOIN cc_phone_stations s ON s.id=a.station_id
+    WHERE s.phone_id=$1 AND a.target_type='phone'`, [phone.id])).rows[0];
+  phone.extension = assignment?.number || null;
+  // This value is resolved at every authenticated fetch, including after a
+  // number is reassigned or removed. No duplicate extension field in hp_phones.
+
+  // Serve only the managed registration file and master for Polycom; its
+  // reserved local override filename must remain absent.
   const kind = resolved.kind;
-  const baseUrl = resolveBaseUrl(request);
-  const config = buildConfigForPhone(phone, kind, { baseUrl });
+  const baseUrl = enrollment?.base_url || resolveBaseUrl(request);
+  // Native CTI polls the device. URL-authenticated notifications are opt-in
+  // until their firmware behavior and device-side log handling are certified.
+  const config = buildConfigForPhone(phone, kind, { baseUrl, credential: provisioningCredentials(phone, enrollment),
+    eventToken: phone.settings?.polycom_event_notifications === true ? provisioningEventToken(phone, enrollment) : "" });
   if (!config) {
     phoneProvisioningLogger.warn("hardphone_config_generation_failed", { operation: "hp_serve", phoneId: phone.id, mac, detail: { vendor: phone.vendor, kind } });
     return new NextResponse("Not found", { status: 404 });
   }
 
   const sourceIp = requestSourceIp(request);
-  const phoneSourceIp = trustedPhoneSourceIp(request);
+  // HTTP source addresses can be a proxy/tunnel. Device management addresses
+  // are enrolled separately and verified against the physical MAC.
   await pool.query(
-    `UPDATE hp_phones SET last_seen_at = NOW(), last_user_agent = $2,
-       last_ip = COALESCE($3, last_ip),
-       ip_address = COALESCE(NULLIF(ip_address, ''), $3, ip_address),
-       provisioning_state = CASE WHEN provisioning_state = 'pending' THEN 'provisioned' ELSE provisioning_state END
-     WHERE id = $1`,
-    [phone.id, userAgent.slice(0, 300) || null, phoneSourceIp],
+    `UPDATE hp_phones SET last_seen_at = NOW(), last_user_agent = $2 WHERE id = $1`,
+    [phone.id, userAgent.slice(0, 300) || null],
   );
+  if (kind === "registration" || (phone.vendor !== "polycom" && kind === "mac-config")) {
+    await pool.query("UPDATE hp_device_enrollments SET downloaded_at = NOW() WHERE phone_id = $1", [phone.id]);
+  }
   await recordProvisioningEvent(pool, {
     phoneId: phone.id,
     mac,
     eventType: "config_served",
-    detail: { filename, kind, vendor: phone.vendor, userAgent, sourceIp, detectedIp: phoneSourceIp, uaVendorMismatch: Boolean(uaVendor && uaVendor !== phone.vendor) },
+    detail: { filename, kind, vendor: phone.vendor, userAgent, sourceIp, uaVendorMismatch: Boolean(uaVendor && uaVendor !== phone.vendor) },
   });
 
   return new NextResponse(config.body, {

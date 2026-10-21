@@ -22,16 +22,16 @@ const request = fields => new Request('https://cc.test/api/auth/update-password'
 });
 test('mobile password change stays scoped to authenticated user and verifies current password',async()=>{
   const {route,writes,lookups}=await passwordRoute();
-  const denied=await route.POST(request({currentPassword:'incorrect',newPassword:'Valid-New-Password!',userId:'another-user'}));
+  const denied=await route.POST(request({currentPassword:'incorrect',newPassword:'Synthetic-New-A9!',userId:'another-user'}));
   assert.equal(denied.status,400);assert.equal(writes.length,0);
-  const accepted=await route.POST(request({currentPassword:'current-test-password',newPassword:'Valid-New-Password!',userId:'another-user'}));
+  const accepted=await route.POST(request({currentPassword:'current-test-password',newPassword:'Synthetic-New-A9!',userId:'another-user'}));
   assert.equal(accepted.status,200);assert.equal(writes[0].id,USERS.agent.id);
   assert.ok(lookups.every(id=>id===USERS.agent.id));
-  assert.notEqual(writes[0].values.hash,'Valid-New-Password!');
+  assert.notEqual(writes[0].values.hash,'Synthetic-New-A9!');
 });
 test('password update rejects unauthenticated, malformed and weak requests',async()=>{
   const unauth=await passwordRoute(null);
-  assert.equal((await unauth.route.POST(request({newPassword:'Valid-New-Password!'}))).status,401);
+  assert.equal((await unauth.route.POST(request({newPassword:'Synthetic-New-A9!'}))).status,401);
   assert.equal(unauth.lookups.length,0);
   const {route,writes}=await passwordRoute();
   for(const newPassword of [null,{},'weak']) {

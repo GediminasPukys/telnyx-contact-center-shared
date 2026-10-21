@@ -141,12 +141,13 @@ async function polyStatus(host, password) {
   return { ok: callStatus.ok || lineInfo.ok, reachable: callStatus.ok || lineInfo.ok, call: callStatus.ok ? callStatus.data?.data ?? null : null, line: lineInfo.ok ? lineInfo.data?.data ?? null : null, reason: callStatus.ok || lineInfo.ok ? undefined : callStatus.reason };
 }
 
-async function activePolyCall(host, password) {
+async function activePolyCall(host, password, callRef) {
   const result = await polyRequest(host, "/api/v1/webCallControl/callStatus", { password });
   if (!result.ok) return null;
   const payload = result.data?.data;
   const calls = Array.isArray(payload) ? payload : payload ? [payload] : [];
-  const call = calls.find((c) => c?.Ref || c?.CallHandle) || null;
+  const active = calls.filter(c => (c?.Ref || c?.CallHandle) && !/idle|disconnect|ended/i.test(c.CallState || ""));
+  const call = callRef ? active.find(c => String(c.Ref || c.CallHandle) === String(callRef)) : active.length === 1 ? active[0] : null;
   return call ? { ref: call.Ref || call.CallHandle, state: call.CallState || "", raw: call } : null;
 }
 
@@ -413,7 +414,7 @@ async function executeCommand({ vendor, host, action = "status", payload = {} })
     if (action === "status") return { ...(await polyStatus(host, password)), discovered_ip: host };
     if (action === "dial") return polyRequest(host, "/api/v1/callctrl/dial", { method: "POST", password, body: { data: { Dest: String(payload.number || payload.target || ""), Line: "1" } } });
     if (["answer", "hangup", "hold", "resume"].includes(action)) {
-      const call = await activePolyCall(host, password);
+      const call = await activePolyCall(host, password, payload.callRef);
       if (!call?.ref) return { ok: false, reason: "no_active_call" };
       const map = { answer: "answerCall", hangup: "endCall", hold: "holdCall", resume: "resumeCall" };
       const result = await polyRequest(host, `/api/v1/callctrl/${map[action]}`, { method: "POST", password, body: { data: { Ref: call.ref } } });
@@ -424,10 +425,17 @@ async function executeCommand({ vendor, host, action = "status", payload = {} })
       return result;
     }
     if (action === "mute" || action === "unmute") {
-      const call = await activePolyCall(host, password);
+      const call = await activePolyCall(host, password, payload.callRef);
       if (!call?.ref) return { ok: false, reason: "no_active_call" };
       if (isHeldPolyCall(call)) return { ok: false, reason: "mute_not_allowed_while_held", polyStatus: "4003" };
       return polyRequest(host, "/api/v1/callctrl/mute", { method: "POST", password, body: { data: { state: action === "mute" ? "1" : "0" } } });
+    }
+    if (action === "send_dtmf") {
+      if (!/^[0-9A-D*#]{1,32}$/.test(String(payload.digits || ""))) return {ok:false,reason:"invalid_dtmf"};
+      const call = await activePolyCall(host, password, payload.callRef);
+      if (!call) return {ok:false,reason:"no_active_call"};
+      if (isHeldPolyCall(call)) return {ok:false,reason:"dtmf_not_allowed_while_held"};
+      return polyRequest(host, "/api/v1/callctrl/sendDTMF", {method:"POST",password,body:{data:{Digits:String(payload.digits)}}});
     }
     if (action === "reboot") return polyRequest(host, "/api/v1/mgmt/safeReboot", { method: "POST", password, body: {} });
     if (action === "reprovision") return polyRequest(host, "/api/v1/mgmt/updateConfiguration", { method: "POST", password, body: {} });

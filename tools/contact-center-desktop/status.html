@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self';">
+<title>Desktop CTI bridge</title><link rel="stylesheet" href="status.css"></head>
+<body><header><img class="brand" src="assets/telnyx-logo.png" alt="Telnyx"><span class="badge">DESKTOP PROTOTYPE</span></header>
+<h1>Your local phone bridge</h1><p>Contact Center controls your authorized desk phones through this computer. Keep the desktop application running.</p>
+<section><div class="row"><strong>Cloud connection</strong><span id="relay">Connecting…</span></div>
+<div class="row"><span>SIP listener</span><code id="listener">Starting…</code></div></section>
+<div id="phones"><section class="skeleton"></section><section class="skeleton"></section></div>
+<p id="error" role="status"></p><footer>Sign in to Contact Center, choose your phone, then use the mini or floating phone controls.</footer>
+<script src="status.js"></script></body></html>

@@ -3,6 +3,8 @@ import { useUiText } from "@/components/i18n/use-ui-text";
 
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { usePhoneChoice } from "@/components/telephony/use-phone-choice";
+import StationPhoneMenu from "@/components/telephony/StationPhoneMenu";
 import { VoiceRecoveryBadge } from "@/components/voice-recovery-badge";
 import { Softphone } from "@/components/softphone";
 import { usePhoneUi } from "@/components/phone-ui-provider";
@@ -16,6 +18,8 @@ import { notify } from "@/components/ToastNotify";
 
 export default function FloatingSoftphone() {
   const tUi = useUiText();
+  const choice = usePhoneChoice();
+  const native = ["deskphone", "sip"].includes(choice?.kind);
   const { visible, toggle } = usePhoneUi();
   const { enabled: experimentalFeaturesEnabled } = useExperimentalFeatures();
   const boxRef = useRef(null);
@@ -41,6 +45,7 @@ export default function FloatingSoftphone() {
 
 
   useEffect(() => {
+    if (native) return;
     let cancelled = false;
 
     (async () => {
@@ -62,7 +67,7 @@ export default function FloatingSoftphone() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [native]);
 
   const copySipUri = async () => {
     if (!sipUri) {
@@ -109,6 +114,15 @@ export default function FloatingSoftphone() {
       y: Math.min(Math.max(rawY, minY), maxY),
     };
   };
+
+  // Keypad expansion changes the measured height after the panel is opened.
+  useEffect(() => {
+    if (!visible || !boxRef.current) return;
+    const observer = new ResizeObserver(() => setPos(p => clampPos(p.x,p.y)));
+    observer.observe(boxRef.current);
+    return () => observer.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible,viewport.w,viewport.h]);
 
   // Initialize position from saved or default when becoming visible
   useEffect(() => {
@@ -199,6 +213,7 @@ export default function FloatingSoftphone() {
 
   return (
     <div
+      data-testid="floating-softphone"
       ref={boxRef}
       className="fixed z-[1000] left-0 top-0 select-none"
       style={{
@@ -208,16 +223,16 @@ export default function FloatingSoftphone() {
     >
       <div className="flex">
         {/* Phone Panel */}
-        <div className="relative" style={{ width: PANEL_W }}>
+        <div className="relative max-h-[calc(100dvh-24px)] overflow-y-auto rounded-xl" style={{ width: PANEL_W }}>
           <div className="relative cursor-move" data-drag-handle>
             <div className="rounded-t-xl bg-zinc-700 text-background/80 dark:text-foreground/80 border border-border border-b-0 px-3 py-2 text-xs flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <VoiceRecoveryBadge />
-                {experimentalFeaturesEnabled ? <HeadsetStatusBadge /> : null}
+                {native ? <StationPhoneMenu /> : <VoiceRecoveryBadge />}
+                {!native && experimentalFeaturesEnabled ? <HeadsetStatusBadge /> : null}
                 <PhoneStatus />
               </div>
               <div className="flex items-center gap-1">
-                <button
+                {!native ? <button
                   type="button"
                   aria-label={tUi("Copy WebRTC URI")}
                   title={sipUri ? tUi("Copy {value0}", { value0: sipUri }) : tUi("WebRTC URI not configured")}
@@ -226,7 +241,7 @@ export default function FloatingSoftphone() {
                   disabled={!sipUri}
                 >
                   <Copy aria-hidden="true" className="h-4 w-4" />
-                </button>
+                </button> : null}
                 {/* Close button */}
                 <button
                   type="button"

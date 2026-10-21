@@ -105,6 +105,9 @@ test('one committed offer reaches both iOS/APNs and Android/FCM once', async () 
 
 test('voice endpoint HTTP handlers register, list, select and withdraw Android', async () => {
   const user = await userFixture();
+  await pool.query(`CREATE TABLE IF NOT EXISTS cc_voice_login_choices(
+    auth_session_id TEXT PRIMARY KEY,agent_id TEXT NOT NULL,pending_selection BOOLEAN NOT NULL DEFAULT true)`);
+  await pool.query("INSERT INTO cc_voice_login_choices(auth_session_id,agent_id) VALUES($1,$2)",[user.authSessionId,user.id]);
   const route = await loadRoute('app/api/contact-center/agent/voice-endpoints/route.js', {
     '@/lib/auth-server': { getAuthenticatedUser: async () => user },
     '@/lib/postgres.mjs': { getPostgresPool: () => pool },
@@ -123,6 +126,7 @@ test('voice endpoint HTTP handlers register, list, select and withdraw Android',
   const endpoint = await voiceEndpoints.authenticateVoiceEndpoint(pool, user, token);
   await heartbeatAgentSession(pool, { agentId: user.id, sessionId: id, voiceEndpoint: endpoint, voiceReady: true, pushReady: true });
   assert.equal((await route.PUT(request('PUT', { endpointId: id, expectedGeneration: '0' }))).status, 200);
+  assert.equal((await pool.query("SELECT pending_selection FROM cc_voice_login_choices WHERE auth_session_id=$1",[user.authSessionId])).rows[0].pending_selection,false);
   await heartbeatAgentSession(pool, { agentId: user.id, sessionId: id, voiceEndpoint: endpoint, voiceReady: false, pushReady: true });
   const listed = await route.GET(request('GET', null, token));
   assert.equal(listed.body.endpoints[0].kind, 'android');

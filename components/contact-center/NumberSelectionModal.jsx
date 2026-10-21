@@ -1,4 +1,8 @@
 "use client";
+import useDialStore from "@/lib/stores/dial-store";
+import { voiceFetch, voiceEndpointRegistration } from "@/lib/telephony/endpoint-client";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { statusLabel } from "@/lib/i18n/status-labels.mjs";
 import { useUiText } from "@/components/i18n/use-ui-text";
 
@@ -136,6 +140,32 @@ export function NumberSelectionModal({
   const [selectedAssistantId, setSelectedAssistantId] = useState("");
   const [selectedNumber, setSelectedNumber] = useState("");
   const [manualNumber, setManualNumber] = useState("");
+  const {outboundIdentity,setOutboundIdentity} = useDialStore();
+  const [identities,setIdentities] = useState(null), [identityError,setIdentityError] = useState("");
+  const [extensionLookup,setExtensionLookup] = useState(null);
+  const shortNumber = /^[1-9]\d{2,4}$/.test(manualNumber.trim());
+  useEffect(() => {
+    if (!open || mode !== "dial") return;
+    const controller = new AbortController();
+    setIdentities(null); setIdentityError("");
+    fetch("/api/telephony/dial-options",{signal:controller.signal}).then(async r => {
+      const data = await r.json(); if (!r.ok) throw Error(data.error);
+      setIdentities(data.identities);
+      setOutboundIdentity(data.selectedIdentity || "personal");
+    }).catch(e => {if(!controller.signal.aborted)setIdentityError(e.message);});
+    return () => controller.abort();
+  },[open,mode,setOutboundIdentity]);
+  useEffect(() => {
+    if (!open || !shortNumber) return;
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      fetch(`/api/telephony/dial-options?extension=${encodeURIComponent(manualNumber.trim())}`,{signal:controller.signal})
+        .then(async r => {const data=await r.json(); if(!r.ok)throw Error(data.error); setExtensionLookup({...data,query:manualNumber.trim()});})
+        .catch(e => {if(!controller.signal.aborted)setExtensionLookup({error:e.message,query:manualNumber.trim()});});
+    },250);
+    return () => {clearTimeout(timer);controller.abort();};
+  },[manualNumber,open,shortNumber]);
+
   const [agents, setAgents] = useState([]);
   const [agentStats, setAgentStats] = useState(null);
   const [selectedAgentNumber, setSelectedAgentNumber] = useState("");
@@ -289,10 +319,11 @@ export function NumberSelectionModal({
       agentStats?.voice_number;
 
     // First: Softphone (if telephony_user_name exists)
-    if (telephonyUserName && String(telephonyUserName).trim() !== "") {
+    const extension = fullUserProfile?.extension || agentStats?.extension;
+    if (extension || (telephonyUserName && String(telephonyUserName).trim() !== "")) {
       numbers.push({
-        value: `sip:${telephonyUserName}@sip.telnyx.com`,
-        label: "Softphone (VoIP call)",
+        value: extension || `sip:${telephonyUserName}@sip.telnyx.com`,
+        label: extension ? tUi("Extension · {extension}", {extension}) : "Phone (internal)",
         type: "sip",
         icon: Network,
         iconColor: "text-cyan-500",
@@ -420,7 +451,7 @@ export function NumberSelectionModal({
       return selectedAssistantId;
     } else if (selectionType === "manual") {
       const v = manualNumber.trim();
-      return v && (v.startsWith("+") || v.startsWith("sip:"));
+      return shortNumber ? extensionLookup?.query === v && !extensionLookup.error : /^\+[1-9]\d{6,14}$/.test(v) || /^sip:[^@\s]+@[^\s]+$/.test(v);
     }
     return false;
   };
@@ -439,76 +470,31 @@ export function NumberSelectionModal({
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          {/* Selection Type */}
-          <div className="grid grid-cols-4 gap-2">
-            <button
-              type="button"
-              onClick={() => setSelectionType("users")}
-              className={cn(
-                "flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all",
-                selectionType === "users"
-                  ? "bg-purple-500 text-white border-purple-600"
-                  : "bg-purple-500/10 text-purple-600 border-purple-500/20 hover:bg-purple-500/20",
-              )}
-            >
-              <UserCheck className="h-5 w-5" />
-              <div className="font-semibold text-xs">{tUi("Users")}</div>
-              {selectionType === "users" && (
-                <CheckCircle2 className="h-3 w-3" />
-              )}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setSelectionType("contact")}
-              className={cn(
-                "flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all",
-                selectionType === "contact"
-                  ? "bg-green-500 text-white border-green-600"
-                  : "bg-green-500/10 text-green-600 border-green-500/20 hover:bg-green-500/20",
-              )}
-            >
-              <Users className="h-5 w-5" />
-              <div className="font-semibold text-xs">{tUi("Contacts")}</div>
-              {selectionType === "contact" && (
-                <CheckCircle2 className="h-3 w-3" />
-              )}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setSelectionType("assistants")}
-              className={cn(
-                "flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all",
-                selectionType === "assistants"
-                  ? "bg-indigo-500 text-white border-indigo-600"
-                  : "bg-indigo-500/10 text-indigo-600 border-indigo-500/20 hover:bg-indigo-500/20",
-              )}
-            >
-              <Bot className="h-5 w-5" />
-              <div className="font-semibold text-xs">{tUi("AI Agents")}</div>
-              {selectionType === "assistants" && (
-                <CheckCircle2 className="h-3 w-3" />
-              )}
-            </button>
-
-            <button
-              type="button"
-              data-testid="dial-manual" onClick={() => setSelectionType("manual")}
-              className={cn(
-                "flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all",
-                selectionType === "manual"
-                  ? "bg-orange-500 text-white border-orange-600"
-                  : "bg-orange-500/10 text-orange-600 border-orange-500/20 hover:bg-orange-500/20",
-              )}
-            >
-              <Phone className="h-5 w-5" />
-              <div className="font-semibold text-xs">{tUi("Manual")}</div>
-              {selectionType === "manual" && (
-                <CheckCircle2 className="h-3 w-3" />
-              )}
-            </button>
-          </div>
+          {mode === "dial" && <div className="space-y-2">
+            <Label>{tUi("Call on behalf of")}</Label>
+            {identityError ? <p role="alert" className="text-sm text-destructive">{identityError}</p> : !identities ? <Skeleton className="h-10 w-full" /> :
+              <Select value={outboundIdentity} onValueChange={async identity => {
+                try {
+                if (voiceEndpointRegistration()) {
+                  const response = await voiceFetch("/api/telephony/dial-options", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ identity }) });
+                  if (!response.ok) { setIdentityError((await response.json()).error); return; }
+                }
+                setOutboundIdentity(identity);
+                } catch { setIdentityError(tUi("Could not save calling identity.")); }
+              }}>
+                <SelectTrigger data-testid="outbound-identity"><SelectValue /></SelectTrigger>
+                <SelectContent>{identities.map(i => <SelectItem key={i.id} value={i.id}>
+                  {`${i.kind === "personal" ? tUi("My number") : i.label} · ${i.number || tUi("Not configured")}`}
+                </SelectItem>)}</SelectContent>
+              </Select>}
+            <p className="text-xs text-muted-foreground">{tUi("Internal calls use your personal identity. External queue calls are reported against the selected queue.")}</p>
+          </div>}
+          <Tabs value={selectionType} onValueChange={setSelectionType}>
+            <TabsList className="w-full">
+              {[['users','Users',UserCheck],['contact','Contacts',Users],['assistants','AI Agents',Bot],['manual','Manual',Phone]].map(([value,label,Icon]) =>
+                <TabsTrigger key={value} value={value} data-testid={value === "manual" ? "dial-manual" : undefined} className="flex-1 gap-2"><Icon className="h-4 w-4" />{tUi(label)}</TabsTrigger>)}
+            </TabsList>
+          </Tabs>
 
           {/* Users Selection */}
           {selectionType === "users" && (
@@ -812,11 +798,17 @@ export function NumberSelectionModal({
                 <Phone className="h-4 w-4 text-green-600" />{tUi("Phone Number or SIP URI")}</Label>
               <Input
                 type="tel"
-                data-testid="dial-number" placeholder={tUi("+1234567890 or sip:user@domain.com")}
+                data-testid="dial-number" placeholder={tUi("Extension, +1234567890 or sip:user@domain.com")}
                 value={manualNumber}
                 onChange={(e) => setManualNumber(e.target.value)}
                 className="w-full"
               />
+              {shortNumber && (!extensionLookup || extensionLookup.query !== manualNumber.trim() ? <Skeleton className="h-12 w-full" /> :
+                extensionLookup.error ? <p role="alert" className="text-sm text-destructive">{extensionLookup.error}</p> :
+                <div data-testid="extension-match" className="flex items-center gap-3 rounded-lg border bg-muted/40 p-3">
+                  {extensionLookup.type === "user" ? <UserCheck className="h-5 w-5 text-violet-500" /> : extensionLookup.type === "queue" ? <Users className="h-5 w-5 text-emerald-500" /> : <Phone className="h-5 w-5 text-sky-500" />}
+                  <div><p className="font-medium">{extensionLookup.label}</p><p className="text-xs text-muted-foreground">{extensionLookup.type} · {extensionLookup.extension}</p></div>
+                </div>)}
             </div>
           )}
 

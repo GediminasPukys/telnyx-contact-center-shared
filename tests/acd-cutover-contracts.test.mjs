@@ -185,7 +185,7 @@ test("C1 direct-agent identity comes from SIP/E.164 destination, never credentia
   assert.equal(bareSipUser.agent.id, "agent-a");
   assert.equal(bareSipUser.matchedBy, "sip_user");
 
-  const telnyxCredentialUser = "gencredNb4q5bw98tKFI5t40W04UipQA9MSXMwQqaAUSGesgR";
+  const telnyxCredentialUser = "gencredSyntheticTestIdentity1234567890";
   assert.equal(sipUser(telnyxCredentialUser), telnyxCredentialUser.toLowerCase());
   assert.equal(normalizedPhone(telnyxCredentialUser), null);
   assert.equal(

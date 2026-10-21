@@ -1,4 +1,5 @@
 import NextAuth from "next-auth";
+import { consumeDesktopAuth } from "@/lib/desktop-auth.mjs";
 import Google from "next-auth/providers/google";
 import GitHub from "next-auth/providers/github";
 import Facebook from "next-auth/providers/facebook";
@@ -24,10 +25,20 @@ async function voiceProvisioningEnabled(userId) {
 export const authOptions = {
   adapter: PostgresNextAuthAdapter(),
   session: { strategy: "jwt" },
-  pages: { signIn: "/signin" },
+  pages: { signIn: "/signin", error: "/signin" },
   trustHost: true,
   // debug: process.env.NODE_ENV !== "production",
   providers: [
+    Credentials({
+      id: "desktop", name: "Desktop browser sign-in", credentials: {},
+      async authorize(creds) {
+        const id = await consumeDesktopAuth(getPostgresPool(), creds?.requestId, creds?.verifier, creds?.authorizationCode);
+        if (!id) return null;
+        const user = await PgDb.findUserById(id);
+        if (!user || user.active === false) return null;
+        return { id: String(user.id), email: user.username, name: [user.first_name, user.last_name].filter(Boolean).join(" ") || user.username };
+      },
+    }),
     Google({
       clientId: process.env.GOOGLE_ID,
       clientSecret: process.env.GOOGLE_SECRET,
@@ -245,6 +256,10 @@ export const authOptions = {
       return true;
     },
     async jwt({ token, user, account, profile, trigger }) {
+      if (account && user) {
+        token.authProvider = account.provider;
+        token.authenticatedAt = Date.now();
+      }
       // For OAuth providers (especially Google), always use the app's users table ID
       // not the NextAuth auth_users table ID
       if (account?.provider === "google" && profile?.email) {
@@ -452,6 +467,10 @@ export const authOptions = {
           sessionToken: token?.authTrackingSessionId || null,
           source: "nextauth_signout",
         });
+        if (token?.id && token?.authTrackingSessionId) {
+          const { releaseAuthStations } = await import("@/lib/telephony/stations.mjs");
+          await releaseAuthStations(getPostgresPool(), { id:String(token.id), authSessionId:token.authTrackingSessionId });
+        }
         await logAuthEvent("info", "logout_success", {
           userId: result?.user?.id ? String(result.user.id) : undefined,
           source: "nextauth_signout",

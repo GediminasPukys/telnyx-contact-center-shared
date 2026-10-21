@@ -7,7 +7,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { useThemeColors } from "@/hooks/use-theme-colors";
 import { TelephonyProvider } from "@/components/telephony-provider";
 import { PhoneUiProvider } from "@/components/phone-ui-provider";
-import FloatingSoftphone from "@/components/floating-softphone";
+import SessionSoftphone from "@/components/telephony/SessionSoftphone";
 import DeviceHandoffHost from "@/components/contact-center/handoff/DeviceHandoffHost";
 import { ContactCenterStreamProvider } from "@/components/contact-center/ContactCenterStreamProvider";
 import { AgentInteractionsProvider } from "@/components/contact-center/AgentInteractionsProvider";
@@ -17,6 +17,8 @@ import { HelpProvider } from "@/components/help/HelpProvider";
 import { ContextHelpSheet } from "@/components/help/ContextHelpSheet";
 import { ScreenGuard } from "@/components/auth-provider";
 import { AccessDeniedNotice } from "@/components/access-denied-notice";
+import PhoneSelectionGate from "@/components/telephony/PhoneSelectionGate";
+import NativePhoneSession from "@/components/telephony/NativePhoneSession";
 
 export default function PortalLayout({ children }) {
   useThemeColors();
@@ -28,7 +30,7 @@ export default function PortalLayout({ children }) {
   }, []);
 
   return (
-    <HelpProvider>
+    <PhoneSelectionGate><HelpProvider>
       <SidebarProvider
         className="flex h-full flex-1"
         style={{
@@ -37,6 +39,7 @@ export default function PortalLayout({ children }) {
         }}
       >
         <TelephonyProvider>
+          <NativePhoneSession>
           <PhoneUiProvider>
             <ContactCenterStreamProvider>
               <AgentInteractionsProvider>
@@ -56,15 +59,16 @@ export default function PortalLayout({ children }) {
                     </div>
                   </div>
                 </SidebarInset>
-                <FloatingSoftphone />
+                <SessionSoftphone />
                 <DeviceHandoffHost />
                 <GlobalWrapupSheet />
               </AgentInteractionsProvider>
             </ContactCenterStreamProvider>
           </PhoneUiProvider>
+          </NativePhoneSession>
         </TelephonyProvider>
         <ContextHelpSheet />
       </SidebarProvider>
-    </HelpProvider>
+    </HelpProvider></PhoneSelectionGate>
   );
 }

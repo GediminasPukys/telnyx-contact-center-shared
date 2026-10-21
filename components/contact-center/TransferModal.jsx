@@ -234,6 +234,8 @@ export function TransferModal({
   interaction: currentInteraction,
   onTransfer,
   onConsultCallCreated,
+  nativePhone = false,
+  onNativeAction,
 }) {
   const tUi = useUiText();
   // Other agents' live statistics need agents:read (RBAC Phase 5); one's own are always visible.
@@ -830,11 +832,12 @@ export function TransferModal({
       agentStats?.voiceNumber ||
       agentStats?.voice_number;
 
-    // First: Softphone (if telephony_user_name exists)
-    if (telephonyUserName && String(telephonyUserName).trim() !== "") {
+    // Resolve a user's extension to their currently selected phone on the server.
+    const extension = fullUserProfile?.extension || agentStats?.extension;
+    if (extension || (telephonyUserName && String(telephonyUserName).trim() !== "")) {
       numbers.push({
-        value: `sip:${telephonyUserName}@sip.telnyx.com`,
-        label: "Softphone (VoIP call)",
+        value: extension || `sip:${telephonyUserName}@sip.telnyx.com`,
+        label: extension ? tUi("Extension · {extension}", {extension}) : "Phone (internal)",
         type: "sip",
         icon: Network,
         iconColor: "text-cyan-500",
@@ -1086,7 +1089,7 @@ export function TransferModal({
       return;
     }
 
-    if (!client) {
+    if (!client && !nativePhone) {
       notify({
         title: "Consult unavailable",
         description: "The WebRTC phone is not connected.",
@@ -1145,6 +1148,10 @@ export function TransferModal({
         throw new Error(failure);
       }
 
+      if (nativePhone) {
+        setConsultState(previous => ({...previous,isActive:intent?.step === "in_consult",initiating:intent?.step !== "in_consult",activeLeg:intent?.activeLeg || "parked"}));
+        return;
+      }
       if (!intent?.browserCall?.customHeaders?.length) {
         throw new Error(
           "Core did not prepare the browser consultation call",
@@ -1319,6 +1326,7 @@ export function TransferModal({
 
   const handleToggleMute = () => {
     if (!activeCall) return;
+    if (nativePhone) { void onNativeAction?.(callUI.isMuted ? "unmute" : "mute"); return; }
     try {
       if (callUI.isMuted) {
         activeCall.unmuteAudio?.() || activeCall.unmute?.();
@@ -1334,6 +1342,7 @@ export function TransferModal({
 
   const handleToggleHold = () => {
     if (!activeCall) return;
+    if (nativePhone) { void onNativeAction?.(callUI.isHeld ? "resume" : "hold"); return; }
     try {
       const { updateStatus } = useActiveCallStore.getState();
       if (callUI.isHeld) {
@@ -1394,7 +1403,7 @@ export function TransferModal({
       return selectedAssistantId;
     } else if (selectionType === "manual") {
       const v = manualNumber.trim();
-      return v && (v.startsWith("+") || v.startsWith("sip:"));
+      return v && (/^[1-9]\d{2,4}$/.test(v) || v.startsWith("+") || v.startsWith("sip:"));
     }
     return false;
   };

@@ -2,9 +2,49 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { readFile } from 'node:fs/promises';
-import { parseWordPreview } from '../lib/documents/word-preview.mjs';
+import { parseWordPreview, sanitizeWordHtml } from '../lib/documents/word-preview.mjs';
+import sanitizeHtml from 'sanitize-html';
 
 const require = createRequire(import.meta.url);
+
+test('discarded iframe fallback cannot overflow the sanitizer stack or bypass nesting limits', () => {
+  assert.doesNotThrow(() => sanitizeHtml('<iframe>'.repeat(20000)));
+  const output = sanitizeHtml(('<iframe>' + '<b>'.repeat(3)).repeat(50) + 'text', {
+    allowedTags: ['b'], nestingLimit: 3,
+  });
+  let depth = 0;
+  for (const tag of output.match(/<\/?b>/g) || []) {
+    depth += tag === '<b>' ? 1 : -1;
+    assert(depth <= 3, 'discarded iframe fallback must share the nesting limit');
+  }
+  // Exercise the application's real wrapper as well as the dependency default.
+  for (const payload of ['<iframe>'.repeat(2000), ('<iframe>' + '<strong>'.repeat(3)).repeat(50)]) {
+    try {
+      assert.doesNotMatch(sanitizeWordHtml(payload), /<iframe/i);
+    } catch (error) {
+      assert.equal(error.code, 'preview_too_complex');
+    }
+  }
+  assert.equal(sanitizeWordHtml('<p>Safe <strong>preview</strong></p>'), '<p>Safe <strong>preview</strong></p>');
+});
+
+test('Hono static lookup cannot decode a protected path after routing', async () => {
+  const { Hono } = require('hono');
+  const { serveStatic } = require('hono/serve-static');
+  const app = new Hono();
+  app.use('/private/*', (context) => context.text('Authentication required', 401));
+  app.use('*', serveStatic({
+    root: './',
+    getContent: (path) => path === 'private/example.txt' ? 'protected example' : path === 'public.txt' ? 'public example' : null,
+  }));
+  assert.equal((await app.request('/private/example.txt')).status, 401);
+  assert.equal(await (await app.request('/public.txt')).text(), 'public example');
+  for (const path of ['/%2570rivate/example.txt', '/%70rivate/example.txt', '/%pr%69vate/example.txt']) {
+    const response = await app.request(path);
+    assert.notEqual(response.status, 200, path);
+    assert.notEqual(await response.text(), 'protected example', path);
+  }
+});
 
 test('Word preview does not load the vulnerable Mammoth CLI formatter or build-time glob parser', async () => {
   const bytes = await readFile(new URL('./fixtures/documents/word.docx', import.meta.url));

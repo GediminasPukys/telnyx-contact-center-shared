@@ -3,6 +3,7 @@ import { getPostgresPool } from "@/lib/postgres.mjs";
 import { executeCtiAction, CTI_ACTIONS } from "@/lib/hardphones/cti.mjs";
 import { adminRuntimeLogger, runtimePayload } from "@/lib/runtime-logging.mjs";
 import { withPermission } from "@/lib/authz/guard";
+import { getProvisioningEnrollment } from "@/lib/hardphones/provisioning-access.mjs";
 
 
 function resolveBaseUrl(request) {
@@ -64,13 +65,20 @@ async function POST_handler(request, { params }, authz) {
     const hostOverride = validHostOverride(body?.host || body?.ip || "");
     if (hostOverride === null) return NextResponse.json({ error: "Invalid phone IP/host override" }, { status: 400 });
     const targetPhone = hostOverride ? { ...phone, last_ip: hostOverride, ip_address: hostOverride } : phone;
+    if (phone.vendor === "polycom") {
+      const enrollment = await getProvisioningEnrollment(pool, phone.id);
+      targetPhone.certificate_fingerprint = enrollment?.certificate_fingerprint;
+    }
 
-    const result = await executeCtiAction(targetPhone, action, { number: body?.number, digits: body?.digits }, {
+    const result = await executeCtiAction(targetPhone, action, { number: body?.number, digits: body?.digits, callRef: body?.callRef }, {
       pool,
       baseUrl: resolveBaseUrl(request),
     });
 
     const registrationStatus = action === "status" ? registrationStatusFromCtiResult(result) : null;
+    if (registrationStatus && result.ok) {
+      await pool.query("UPDATE hp_phones SET sip_registration_status = $2, sip_registration_status_at = NOW(), last_seen_at = NOW() WHERE id = $1", [phone.id, registrationStatus]);
+    }
     const discoveredIp = String(result?.discovered_ip || result?.result?.discovered_ip || hostOverride || "").trim();
     if (discoveredIp && result.ok !== false) {
       await pool.query(`UPDATE hp_phones SET last_ip = $2, ip_address = COALESCE(NULLIF(ip_address, ''), $2, ip_address), last_seen_at = NOW(), updated_at = NOW() WHERE id = $1`, [phone.id, discoveredIp]);

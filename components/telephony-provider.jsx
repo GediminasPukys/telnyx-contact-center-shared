@@ -1,6 +1,6 @@
 "use client";
 
-import { ensureVoiceEndpoint, voiceFetch, refreshVoiceEndpoints, voiceEndpointRegistration, requestVoiceToken } from "@/lib/telephony/endpoint-client";
+import { ensureVoiceEndpoint, voiceFetch, refreshVoiceEndpoints, voiceEndpointRegistration, requestVoiceToken, selectVoiceEndpoint, browserVoiceDeviceId, resetVoiceEndpoint, setVoiceLoginChoice, adoptStationRegistration } from "@/lib/telephony/endpoint-client";
 import {
   createContext,
   useCallback,
@@ -73,6 +73,7 @@ const TelephonyContext = createContext({
   error: "",
   recovery: { state: "idle" },
   reconnect: () => {},
+  changePhone: async () => {},
   clearCache: () => {},
   region: "auto",
   setRegion: () => {},
@@ -96,6 +97,9 @@ export function TelephonyProvider({ children }) {
   const recoveryRef = useRef(null);
   const [recovery, setRecovery] = useState({ state: "idle" });
   const connectingRef = useRef(false);
+  const stationSwitchRef = useRef(false);
+  const connectRef = useRef(null);
+  const [phoneRevision, setPhoneRevision] = useState(0);
   const reconnectTimerRef = useRef(null);
   const retryAttemptRef = useRef(0);
   const statusRef = useRef("disconnected");
@@ -202,16 +206,31 @@ export function TelephonyProvider({ children }) {
     const registration=voiceEndpointRegistration();
     if (!registration) return undefined;
     acdSessionId.current = registration.id;
-    const publish = (offline = false) => voiceFetch("/api/contact-center/agent/session", {
+    const publish = (offline = false) => {
+      if (stationSwitchRef.current || voiceEndpointRegistration() !== registration) return;
+      return voiceFetch("/api/contact-center/agent/session", {
       method: "PUT", headers: { "Content-Type": "application/json" }, keepalive: offline,
       body: JSON.stringify({ sessionId: acdSessionId.current, voiceReady: status === "connected", ready: { video: true }, offline }),
-    }).then(() => refreshVoiceEndpoints()).catch(() => {});
+    }).then(async response => {
+      if (stationSwitchRef.current || voiceEndpointRegistration() !== registration) return;
+      if(!response.ok) {
+        if(["deskphone","sip"].includes(registration.kind) && [401,403,409].includes(response.status)) window.location.assign("/signin/phone");
+        throw new Error("Session heartbeat failed");
+      }
+      const snapshot=await refreshVoiceEndpoints();
+      if (stationSwitchRef.current || voiceEndpointRegistration() !== registration) return;
+      if(!offline && status==="connected" && registration.autoSelect && snapshot.endpoints.some(e=>e.id===registration.id&&e.reachable)) {
+        await selectVoiceEndpoint(registration.id);
+        registration.autoSelect=false;
+      }
+    }).catch(() => {});
+    };
     publish();
     const timer = setInterval(() => { publish(); }, 15000);
     const leave = () => publish(true);
     window.addEventListener("pagehide", leave);
     return () => { clearInterval(timer); window.removeEventListener("pagehide", leave); };
-  }, [status, agentHeartbeat]);
+  }, [status, agentHeartbeat, phoneRevision]);
 
   const [error, setError] = useState("");
   const [client, setClient] = useState(null);
@@ -238,7 +257,7 @@ export function TelephonyProvider({ children }) {
   }, []);
 
   const scheduleReconnect = useCallback((immediate = false) => {
-    if (statusRef.current === "connected" || connectingRef.current) return;
+    if (statusRef.current === "connected" || connectingRef.current || stationSwitchRef.current) return;
     // The SDK owns transient socket recovery. Replacing it loses active calls
     // and races its session reattachment and exponential backoff.
     if (clientRef.current) return;
@@ -251,13 +270,13 @@ export function TelephonyProvider({ children }) {
     reconnectTimerRef.current = setTimeout(() => {
       reconnectTimerRef.current = null;
       if (statusRef.current !== "connected" && !connectingRef.current) {
-        connect();
+        connectRef.current?.();
       }
     }, delay);
   }, []);
 
   const connect = useCallback(async () => {
-    if (statusRef.current === "connected" || connectingRef.current) return;
+    if (statusRef.current === "connected" || connectingRef.current || stationSwitchRef.current) return;
     // No softphone for roles without agent work or supervision grants; the
     // permission answer arrives asynchronously, so connect() is re-armed when it does.
     if (!voiceAllowedRef.current) {
@@ -276,7 +295,12 @@ export function TelephonyProvider({ children }) {
         setError("Voice is disabled for this account.");
         return;
       }
-      await ensureVoiceEndpoint();
+      const selectedRegistration = await ensureVoiceEndpoint();
+      if (selectedRegistration?.kind === "none") { setStatus("disconnected"); return; }
+      if (["deskphone","sip"].includes(selectedRegistration?.kind)) {
+        setStatus("connected");
+        return;
+      }
       let token = null;
       const currentEnv = getCurrentEnvironment();
       const forceRefresh = shouldForceTokenRefresh();
@@ -354,7 +378,7 @@ export function TelephonyProvider({ children }) {
       }
 
       cleanupClient();
-      const selectedRegion = normalizeWebrtcRegion(regionRef.current || region);
+      const selectedRegion = normalizeWebrtcRegion(regionRef.current || DEFAULT_WEBRTC_REGION);
       const experimentalOptions = getWebrtcExperimentalOptions();
       console.log("[webrtc] Connecting", {
         region: selectedRegion,
@@ -496,6 +520,7 @@ export function TelephonyProvider({ children }) {
     }
   }, [cleanupClient, scheduleReconnect]);
 
+  useEffect(() => { connectRef.current = connect; }, [connect]);
 
   const setRegion = useCallback(
     (nextRegion) => {
@@ -526,7 +551,8 @@ export function TelephonyProvider({ children }) {
       );
       regionRef.current = storedRegion;
       if (storedRegion !== region) {
-        setRegionState(storedRegion);
+        const timer = setTimeout(() => setRegionState(storedRegion), 0);
+        return () => clearTimeout(timer);
       }
     } catch (_) {}
     // Run once on mount; subsequent changes go through setRegion.
@@ -539,7 +565,7 @@ export function TelephonyProvider({ children }) {
   }, [voiceAllowed, scheduleReconnect]);
 
   useEffect(() => {
-    connect();
+    scheduleReconnect(true);
     const onOnline = () => {
       if (statusRef.current !== "connected") scheduleReconnect(true);
     };
@@ -563,6 +589,39 @@ export function TelephonyProvider({ children }) {
     };
   }, [connect, cleanupClient, scheduleReconnect]);
 
+  const changePhone = useCallback(async station => {
+    if (connectingRef.current || stationSwitchRef.current) throw new Error("Wait for the phone connection to finish.");
+    if (hasLiveVoiceCall(useActiveCallStore.getState(), clientRef.current)) throw new Error("Finish the current call before changing phones.");
+    stationSwitchRef.current = true;
+    try {
+      const response = await fetch("/api/telephony/stations", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stationId: station?.id, kind: station?.kind || "none", deviceId: browserVoiceDeviceId() }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Phone selection failed");
+      // Only replace the local controller after the server has granted the claim.
+      // Existing page state stays mounted, including unsaved administration forms.
+      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+      cleanupClient();
+      clearTokenCache();
+      resetVoiceEndpoint();
+      setVoiceLoginChoice(result.choice);
+      if (result.registration) adoptStationRegistration(result);
+      const nextStatus = ["deskphone", "sip"].includes(result.choice.kind) ? "connected" : "disconnected";
+      statusRef.current = nextStatus;
+      setStatus(nextStatus);
+      setError("");
+      retryAttemptRef.current = 0;
+      setPhoneRevision(revision => revision + 1);
+      return result;
+    } finally {
+      stationSwitchRef.current = false;
+      if (statusRef.current !== "connected") scheduleReconnect(true);
+    }
+  }, [cleanupClient, scheduleReconnect]);
+
   const value = useMemo(
     () => ({
       client: client,
@@ -570,6 +629,7 @@ export function TelephonyProvider({ children }) {
       error,
       recovery,
       quality,
+      changePhone,
       reconnect: () => {
         if (!voiceAllowedRef.current || connectingRef.current || hasLiveVoiceCall(useActiveCallStore.getState(), clientRef.current)) return;
         cleanupClient();
@@ -587,7 +647,7 @@ export function TelephonyProvider({ children }) {
       setRegion,
       regions: WEBRTC_REGIONS,
     }),
-    [client, status, error, recovery, quality, region, setRegion, scheduleReconnect, cleanupClient]
+    [client, status, error, recovery, quality, region, setRegion, scheduleReconnect, cleanupClient, changePhone]
   );
 
   return (

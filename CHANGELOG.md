@@ -3,7 +3,73 @@
 Official versions follow [Semantic Versioning](https://semver.org/). These notes
 are also available inside the application through **About Contact Center → Release notes**.
 
-## [Unreleased]
+## [1.11.0] - 2026-10-21
+
+This release adds integrated deskphone control, internal extensions, queue-based
+outbound calling and an Electron desktop preview, with improved headset integration
+and device onboarding.
+
+### Added
+
+- **Internal extensions and station selection.** Assign extensions from number
+  pools to users, queues and deskphones. Select a voice device at sign-in, switch
+  phones during a session and resolve manually entered extensions before dialing.
+- **Queue-based outbound caller ID.** Select **My number** or an authorized queue
+  when placing calls. Queue caller IDs are selected from available Telnyx numbers,
+  and outbound queue calls appear in live statistics and historical reports.
+- **Deskphone CTI.** Control answering, hangup, hold/resume, mute, DTMF and blind or
+  consultation transfers from the mini and floating phone. Direct outbound dialing
+  originates from the handset without an incoming callback.
+- **Electron desktop preview.** Run Contact Center with an embedded local CTI
+  bridge, local phone discovery and guided configuration. Settings supports
+  multiple Contact Center environments, a default environment and first-run URL
+  setup.
+- **Automatic Google sign-in return.** Authenticate in the system browser and
+  return automatically to Electron’s phone picker, without entering a confirmation
+  code. Includes cancellation, timeout handling and a branded browser handoff page.
+- **Guided phone provisioning.** Discover compatible phones, try documented factory
+  credentials, request credentials when needed and apply the managed administrator
+  password. Show configuration progress and verify activation on the device.
+
+### Changed
+
+- Refresh phone provisioning with updated artwork, consistent vendor badges,
+  separate Extension and DID columns, editable line labels and an always-visible
+  Save phone footer.
+- Improve headset audio and call-control selection across Jabra, Poly and
+  EPOS/Sennheiser, including Electron HID access.
+- Add macOS Apple Silicon/Intel and Windows x64 packaging, checksums and
+  distribution guidance.
+
+### Fixed
+
+- Restore system-default microphone and speaker when the selected audio device
+  disconnects.
+- Select the matching available headset controller after accepting a newly detected
+  audio device; prevent duplicate HID-open errors.
+- Suppress repeated device-discovery prompts during calls and transient headset
+  reconnects.
+- Fix Electron sign-in navigation, startup loading and phone-setup progress
+  visibility.
+- Improve phone registration recovery, call-state synchronization and transfer
+  lifecycle handling.
+
+### Upgrade notes
+
+- Upgrade the Contact Center backend together with the desktop client.
+- Configure `TELNYX_PHONE_ADMIN_PASSWORD` before provisioning phones. Existing
+  custom line labels and assigned extensions are preserved.
+
+### Known limitations
+
+- Desktop remains a preview. Physical CTI validation covers Polycom VVX 300,
+  AudioCodes 420HD/440HD and Yealink T22P with the documented firmware versions.
+- The desktop bridge must remain running for local CTI; AudioCodes SIP connectivity
+  also depends on it. Legacy Yealink T22P provisioning and remote control retain
+  firmware-specific restrictions.
+- Windows installers and Intel Mac packages were built, but native acceptance was
+  performed on Apple Silicon macOS. Desktop packages are not publisher-signed or
+  notarized.
 
 ## [1.10.0] - 2026-10-19
 

@@ -1,3 +1,4 @@
+import { ownedVoiceNumber } from "@/lib/telephony/dialing.mjs";
 import { saveAdminSettings } from "@/lib/acd/utilization.mjs";
 import { NextResponse } from "next/server";
 import { getPostgresPool } from "@/lib/postgres.mjs";
@@ -77,6 +78,13 @@ async function PUT_handler(request, { params }, authz) {
     return NextResponse.json({ error: "Server not ready" }, { status: 500 });
 
   const set = {};
+  if (body.outboundNumberId !== undefined) {
+    try {
+      const number = await ownedVoiceNumber(body.outboundNumberId);
+      set.outbound_number_id = number?.id || null;
+      set.outbound_number = number?.number || null;
+    } catch (error) { return NextResponse.json({error:error.message},{status:error.status || 502}); }
+  }
   const maybeSet = (key, val) => {
     if (val !== undefined) set[key] = val;
   };

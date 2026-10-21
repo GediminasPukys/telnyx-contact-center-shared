@@ -4,14 +4,10 @@ description: Manage hardphone inventory, SIP registration, LAN bridges, provisio
 audiences: [admin, owner]
 keywords: [hardphone, provisioning, SIP, Poly, Yealink, AudioCodes, bridge, CTI]
 owner: contact-center
-lastReviewed: 2026-07-11
+lastReviewed: 2026-10-20
 ---
 
-Open **Admin → System**, then select **Phones Provisioning**. The nested rail contains Dashboard, Phones, Bridges, Logs, Settings, and Exit.
-
-## Dashboard
-
-Dashboard summarizes fleet vendor distribution, provisioning state, registration identity, and last contact. A phone appears healthy only after it fetches configuration and reports the expected state.
+Open **Admin → System**, then select **Phones Provisioning**. The view contains Phones, Bridges, Logs and Settings tabs. Select a phone in the scrollable inventory to edit it in the persistent right-hand configuration panel. **Save phone** remains in the panel footer while its settings scroll.
 
 ## Phones
 
@@ -19,15 +15,48 @@ Create a phone from the header and configure it in the right **Context Settings*
 
 | Area | Important settings |
 | --- | --- |
-| Identity | Name/label, normalized MAC address, vendor, model, and optional local bridge. |
-| Telnyx | Assigned number, automatically managed SIP credential, and outbound voice profile requirements. |
+| Identity | Phone name, line label, normalized MAC address, vendor, model, and optional local bridge. |
+| Internal numbering | An extension assigned from the phone number pool. The inventory displays this extension and leaves the value empty when none is assigned. |
+| Telnyx | An outbound DID selected from the account inventory, automatically managed SIP credential, and outbound voice profile requirements. |
 | Device | Line keys, CTI mode, SNTP server, timezone, DHCP/site timezone discovery, dynamic reload, and firmware updates. |
 | Operations | Remote status check, reprovision, reboot, enable/disable provisioning, and deletion. |
 | CTI | Dial, answer, hold/resume, mute/unmute, and hang up when supported by the selected device/bridge state. |
 
 Creating a phone requires the server's phone admin password and outbound voice profile configuration. Deleting a phone also deletes its Telnyx credential and cannot be undone.
 
+**Line Label** defaults to the assigned extension. Enter a custom label, such as a conference room name, to display that text on the phone. Clearing a custom label restores the extension. Changing the extension preserves a custom label. A saved label applies during provisioning; an idle, reachable Polycom can also receive an immediate configuration update.
+
+The **Telnyx Number** dropdown searches the account's DID inventory. This number is the outgoing Caller ID for calls made directly from an unclaimed phone. If no DID is assigned, the server uses `TELNYX_MAIN_FROM_NUMBER`. With a user logged into the phone, that user's selected calling identity takes precedence. Assigning an outgoing DID does not alter its incoming call routing.
+
+## Extensions and stations
+
+Open **Admin → System → Extensions & stations** to define separate internal
+number pools for phones, users and queues. For example, reserve 1000–1999 for
+phones, 2000–2999 for users and 3000–3999 for queues. A pool belongs to one
+object type; each object's assignment selector offers numbers from that type.
+Choose an available extension and search for the user, queue or station to
+assign it. The object's own configuration panel also provides its extension
+selector. These internal numbers are separate from account-owned Telnyx DIDs.
+
+Use **Phones & occupancy** to inspect station availability and the user holding
+an active station session. An occupied station cannot be selected by another
+session. Finish active voice work before changing a working device.
+
+## Agent phone selection and calling
+
+After authentication, select an available phone in the login page's phone picker. A phone occupied by another active session shows that user and cannot be claimed. Use the change-phone icon in the phone settings popover to choose another device.
+
+The mini and floating phone controls also operate a selected Polycom. Starting an outgoing call in the application rings the physical phone first; answer it to connect to the destination. The controls support consultation, returning to the original caller, blind transfer and completing a consultation transfer.
+
+The number picker accepts assigned user, queue and phone extensions and shows the matching object. User extensions follow the user's selected endpoint; phone extensions address the device. Unknown short numbers are rejected. For external calls, choose **My number** or an assigned queue with a configured outbound DID. Administrators configure a queue's DID from the Telnyx account list in its edit panel; queue-attributed outbound calls retain the queue in their call records.
+
 ## Bridges
+
+Polycom phones can download their configuration directly from the CC backend over authenticated HTTPS. A local bridge is optional for provisioning. Direct native CTI still requires the backend to reach the phone over LAN or VPN; otherwise use the bridge. The browser does not contact the phone directly.
+
+The experimental Polycom panel provides **Download bootstrap**, **Configure phone**, and **Verify on phone**. Import the private bootstrap through the phone's configuration utility if REST is disabled, and ensure the phone trusts the provisioning server certificate. A successful download alone does not mean that the expected SIP configuration has been applied. Verify the device and registration after reload. If verification remains pending, check the phone's provisioning credentials, certificate trust and network access.
+
+Use this panel for administrative provisioning and diagnostics. Agents select their working device through the phone picker and handle calls through the shared mini or floating phone controls.
 
 Bridges provide an outbound WebSocket relay for phones on a customer LAN without inbound firewall access. Create an enrollment, copy the generated environment values once, deploy the bridge container, and confirm live presence. A bridge cannot be deleted while phones are assigned to it.
 

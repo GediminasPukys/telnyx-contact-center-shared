@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ToastNotify";
 import { UiLocaleProvider } from "@/components/i18n/UiLocaleProvider";
 import { getUiRequestConfig } from "@/lib/i18n/request";
 import { localeDirection } from "@/lib/i18n/locales.mjs";
+import DesktopDiscoveryMenu from "@/components/telephony/DesktopDiscoveryMenu";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -53,6 +54,7 @@ export default async function RootLayout({ children }) {
                 disableTransitionOnChange
               >
                 {children}
+                <DesktopDiscoveryMenu />
                 <Toaster richColors position="bottom-right" />
               </ThemeProvider>
             </ConditionalSessionProvider>

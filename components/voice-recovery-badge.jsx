@@ -6,7 +6,8 @@ import { VoiceQualityDialog } from "@/components/contact-center/VoiceQualityPane
 import { useTelnyx } from "@/components/telephony-provider";
 import { phoneIndicator } from "@/lib/telephony/phone-indicator.mjs";
 import { subscribeVoiceEndpoints } from "@/lib/telephony/endpoint-client";
-import { Wifi, WifiOff, RefreshCw, Settings } from "lucide-react";
+import { Settings, ArrowLeftRight } from "lucide-react";
+import PhoneDeviceIcon from "@/components/telephony/PhoneDeviceIcon";
 import Link from "next/link";
 import {
   Popover,
@@ -14,11 +15,13 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { VoiceEndpointSelector } from "@/components/contact-center/VoiceEndpointSelector";
+import PhoneSwitchDialog from "@/components/telephony/PhoneSwitchDialog";
 
 export function VoiceRecoveryBadge({ promptForDevice = false }) {
   const tUi = useUiText();
   const [devicesOpen, setDevicesOpen] = useState(false);
   const [qualityOpen, setQualityOpen] = useState(false);
+  const [phoneSwitchOpen, setPhoneSwitchOpen] = useState(false);
   const triggerRef = useRef(null);
   const prompted = useRef(false);
   const [endpoints, setEndpoints] = useState(null);
@@ -37,8 +40,7 @@ export function VoiceRecoveryBadge({ promptForDevice = false }) {
     return () => clearInterval(timer);
   }, []);
   const { label, tone, description, color } = phoneIndicator({status, recovery, quality, deviceSelectionRequired, now}, tUi);
-  const Icon =
-    tone === "warning" ? RefreshCw : tone === "ready" ? Wifi : WifiOff;
+  const selectedDevice = endpoints?.endpoints?.find(device => device.id === endpoints.endpointId);
   const colors = {
     green: "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300",
     yellow: "border-yellow-500/40 bg-yellow-500/10 text-yellow-600 dark:text-yellow-300",
@@ -59,7 +61,7 @@ export function VoiceRecoveryBadge({ promptForDevice = false }) {
             title={tUi("{value0}: {value1} Click to choose call device.", { value0: label, value1: description })}
             className={`relative flex h-7 shrink-0 cursor-pointer items-center justify-center rounded-full border transition-colors hover:ring-2 hover:ring-current/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-telnyx-green ${deviceSelectionRequired ? "gap-1.5 px-2" : "w-7"} ${colors[color]}`}
           >
-            <Icon
+            <PhoneDeviceIcon kind={selectedDevice?.kind} formFactor={selectedDevice?.formFactor}
               aria-hidden="true"
               className={`h-4 w-4 ${tone === "warning" ? "motion-safe:animate-pulse" : ""}`}
             />
@@ -81,7 +83,7 @@ export function VoiceRecoveryBadge({ promptForDevice = false }) {
         <PopoverContent
           onCloseAutoFocus={(event) => {
             // The dialog takes focus when leaving the device picker for diagnostics.
-            if (qualityOpen) event.preventDefault();
+            if (qualityOpen || phoneSwitchOpen) event.preventDefault();
           }}
           align="end"
           sideOffset={10}
@@ -90,7 +92,7 @@ export function VoiceRecoveryBadge({ promptForDevice = false }) {
           className="z-[1100] w-80 max-w-[calc(100vw-24px)] max-h-[var(--radix-popover-content-available-height)] overflow-y-auto rounded-2xl bg-popover/95 p-4 shadow-xl backdrop-blur-xl"
         >
           <div className="mb-4 flex items-center gap-2 border-b pb-3">
-            <Icon
+            <PhoneDeviceIcon kind={selectedDevice?.kind} formFactor={selectedDevice?.formFactor}
               aria-hidden="true"
               className={`h-4 w-4 shrink-0 ${tone === "warning" ? "motion-safe:animate-pulse" : ""}`}
             />
@@ -98,6 +100,11 @@ export function VoiceRecoveryBadge({ promptForDevice = false }) {
               <p className="text-sm font-semibold">{tUi("WebRTC phone")}</p>
               <p className="text-xs font-medium">{label}</p>
             </div>
+            <button type="button" aria-label={tUi("Change phone")} title={tUi("Change phone")} data-testid="change-phone"
+              onClick={() => { setDevicesOpen(false); setPhoneSwitchOpen(true); }}
+              className="shrink-0 rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-telnyx-green">
+              <ArrowLeftRight className="h-5 w-5" aria-hidden="true" />
+            </button>
             {/* The gear in the panel's corner: Profile › Devices, where registrations are forgotten. */}
             <Link href="/profile?tab=devices" aria-label={tUi("Manage call devices")} title={tUi("Manage call devices")}
               onClick={() => setDevicesOpen(false)} data-testid="manage-devices"
@@ -113,6 +120,7 @@ export function VoiceRecoveryBadge({ promptForDevice = false }) {
           />
         </PopoverContent>
       </Popover>
+      <PhoneSwitchDialog open={phoneSwitchOpen} onOpenChange={setPhoneSwitchOpen} onCloseAutoFocus={event => { event.preventDefault(); triggerRef.current?.focus(); }} />
       <VoiceQualityDialog
         open={qualityOpen}
         onOpenChange={setQualityOpen}

@@ -4,6 +4,7 @@ import { getPostgresPool } from "@/lib/postgres.mjs";
 import { heartbeatAgentSession } from "@/lib/acd/sessions.mjs";
 import { withPermission } from "@/lib/authz/guard";
 import { createDiagnosticLogger } from "@/lib/diagnostic-logger.mjs";
+import { refreshStationRegistration } from "@/lib/telephony/stations.mjs";
 
 const voiceLogger = createDiagnosticLogger("acd.voice_endpoints");
 
@@ -15,6 +16,7 @@ async function PUT_handler(request, _context, authz) {
     const body = await request.json();
     const token=request.headers.get('x-cc-endpoint-token');
     const voiceEndpoint=token ? await authenticateVoiceEndpoint(pool,user,token) : null;
+    if (voiceEndpoint?.station_id && ['deskphone','sip'].includes(voiceEndpoint.kind)) await refreshStationRegistration(pool,voiceEndpoint.station_id);
     const result = await heartbeatAgentSession(pool, { agentId: String(user.id), sessionId: body.sessionId,
       voiceEndpoint, pushReady: body.pushReady === true, videoPushReady: body.videoPushReady === true, deviceId: body.deviceId, voiceReady: body.voiceReady === true, chatReady: body.chatReady === true, emailReady: body.emailReady === true,
       ready: Object.fromEntries(Object.entries(body.ready && typeof body.ready === "object" ? body.ready : {}).map(([channel, value]) => [channel, value === true])),

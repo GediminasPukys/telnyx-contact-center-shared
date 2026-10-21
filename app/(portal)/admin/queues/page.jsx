@@ -238,11 +238,13 @@ export default function AdminQueuesPage() {
             </div>
           ) : (
             <div className="border rounded-md overflow-hidden">
-              <Table className="table-fixed">
+              <Table className="min-w-[1000px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead className="px-[10px]">{tUi("Name")}</TableHead>
                     <TableHead className="px-[10px]">{tUi("Routing")}</TableHead>
+                    <TableHead className="px-[10px]">{tUi("Caller ID")}</TableHead>
+                    <TableHead className="px-[10px]">{tUi("Extension")}</TableHead>
                     <TableHead className="px-[10px]">{tUi("Max Wait")}</TableHead>
                     <TableHead className="px-[10px]">{tUi("Max Size")}</TableHead>
                     <TableHead className="px-[10px]">{tUi("Priority")}</TableHead>
@@ -270,6 +272,12 @@ export default function AdminQueuesPage() {
                             >
                               {operationalStatusLabel(tUi, String(q.routing_strategy || "fifo").toLowerCase().replaceAll("-", "_"))}
                             </Badge>
+                          </TableCell>
+                          <TableCell className="px-[10px] text-xs whitespace-nowrap">
+                            {q.outbound_number ? <Badge variant="outline" className="font-mono text-emerald-700 border-emerald-500/30 dark:text-emerald-300">{q.outbound_number}</Badge> : null}
+                          </TableCell>
+                          <TableCell className="px-[10px] text-xs whitespace-nowrap">
+                            {q.extension ? <Badge variant="outline" className="font-mono text-sky-700 border-sky-500/30 dark:text-sky-300">{q.extension}</Badge> : null}
                           </TableCell>
                           <TableCell className="px-[10px] text-xs whitespace-nowrap">
                             {q.max_wait_time_secs || 0}{tUi("s")}</TableCell>
@@ -353,7 +361,7 @@ export default function AdminQueuesPage() {
                   {items.length === 0 && (
                     <TableRow>
                       <TableCell
-                        colSpan={7}
+                        colSpan={9}
                         className="text-center py-8 text-sm text-muted-foreground"
                       >{tUi("No queues")}</TableCell>
                     </TableRow>

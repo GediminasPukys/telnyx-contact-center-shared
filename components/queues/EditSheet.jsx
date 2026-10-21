@@ -1,4 +1,6 @@
 "use client";
+import OutboundNumberSelect from "./OutboundNumberSelect";
+import ExtensionAssignment from "@/components/telephony/ExtensionAssignment";
 import { useUiText } from "@/components/i18n/use-ui-text";
 
 import SlaSettings from "@/components/contact-center/SlaSettings";
@@ -202,6 +204,8 @@ export default function EditSheet({
 }) {
   const tUi = useUiText();
   const { openHelp, registerHelpPortalContainer } = useHelp();
+  const [outboundNumberId, setOutboundNumberId] = React.useState("");
+  const [outboundNumber, setOutboundNumber] = React.useState("");
   const [name, setName] = React.useState("");
   const [displayName, setDisplayName] = React.useState("");
   const [description, setDescription] = React.useState("");
@@ -367,6 +371,7 @@ export default function EditSheet({
         // Reset form for new queue
         if (open && !queueId) {
           setName("");
+          setOutboundNumberId(""); setOutboundNumber("");
           setDisplayName("");
           setDescription("");
           setRoutingStrategy("FIFO");
@@ -414,6 +419,7 @@ export default function EditSheet({
         const d = await r.json();
         if (r.ok) {
           setName(d.name || "");
+          setOutboundNumberId(d.outbound_number_id || ""); setOutboundNumber(d.outbound_number || "");
           setDisplayName(d.display_name || "");
           setDescription(d.description || "");
           setRoutingStrategy(d.routing_strategy || "FIFO");
@@ -729,6 +735,7 @@ export default function EditSheet({
     try {
       const payload = {
         utilization: utilization.payload,
+        outboundNumberId: outboundNumberId || null,
         name: name.trim(),
         displayName: displayName.trim() || null,
         description: description.trim() || null,
@@ -856,6 +863,8 @@ export default function EditSheet({
                 <>
                   <Card className="mx-5 my-4"><CardContent className="space-y-4 p-6">
                   {/* Queue Settings */}
+                  <ExtensionAssignment type="queue" targetId={queueId} />
+                  <OutboundNumberSelect value={outboundNumberId} number={outboundNumber} onChange={setOutboundNumberId} />
                   <div>
                     <h3 className="text-sm font-semibold text-muted-foreground mb-3">{tUi("Queue Settings")}</h3>
                     <div className="space-y-3">
