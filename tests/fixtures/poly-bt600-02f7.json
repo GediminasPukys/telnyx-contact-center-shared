@@ -1,0 +1,920 @@
+{
+  "vendorId": 1151,
+  "productId": 759,
+  "productName": "Plantronics BT600",
+  "collections": [
+    {
+      "usagePage": 11,
+      "usage": 5,
+      "inputReports": [
+        {
+          "reportId": 1,
+          "items": [
+            {
+              "reportSize": 1,
+              "reportCount": 1,
+              "usages": [
+                720928
+              ],
+              "isConstant": false,
+              "isArray": false,
+              "isAbsolute": true
+            },
+            {
+              "reportSize": 1,
+              "reportCount": 1,
+              "usages": [
+                720943
+              ],
+              "isConstant": false,
+              "isArray": false,
+              "isAbsolute": false
+            },
+            {
+              "reportSize": 1,
+              "reportCount": 1,
+              "usages": [
+                720929
+              ],
+              "isConstant": false,
+              "isArray": false,
+              "isAbsolute": true
+            },
+            {
+              "reportSize": 1,
+              "reportCount": 1,
+              "usages": [
+                720932
+              ],
+              "isConstant": false,
+              "isArray": false,
+              "isAbsolute": false
+            },
+            {
+              "reportSize": 1,
+              "reportCount": 1,
+              "usages": [
+                720903,
+                589825
+              ],
+              "isConstant": false,
+              "isArray": false,
+              "isAbsolute": false
+            },
+            {
+              "reportSize": 3,
+              "reportCount": 1,
+              "usages": [],
+              "isConstant": true,
+              "isArray": true,
+              "isAbsolute": true
+            }
+          ]
+        },
+        {
+          "reportId": 155,
+          "items": [
+            {
+              "reportSize": 1,
+              "reportCount": 1,
+              "usages": [
+                4288217092
+              ],
+              "isConstant": false,
+              "isArray": false,
+              "isAbsolute": true
+            },
+            {
+              "reportSize": 1,
+              "reportCount": 7,
+              "usages": [],
+              "isConstant": true,
+              "isArray": true,
+              "isAbsolute": true
+            }
+          ]
+        },
+        {
+          "reportId": 154,
+          "items": [
+            {
+              "reportSize": 8,
+              "reportCount": 63,
+              "usages": [
+                4288217091
+              ],
+              "isConstant": false,
+              "isArray": false,
+              "isAbsolute": true
+            }
+          ]
+        },
+        {
+          "reportId": 31,
+          "items": [
+            {
+              "reportSize": 1,
+              "reportCount": 11,
+              "usages": [
+                786658,
+                786665,
+                786666,
+                786608,
+                786609,
+                786611,
+                786612,
+                786613,
+                786614,
+                786615,
+                786637
+              ],
+              "isConstant": false,
+              "isArray": false,
+              "isAbsolute": true
+            },
+            {
+              "reportSize": 5,
+              "reportCount": 1,
+              "usages": [],
+              "isConstant": true,
+              "isArray": true,
+              "isAbsolute": true
+            }
+          ]
+        },
+        {
+          "reportId": 30,
+          "items": [
+            {
+              "reportSize": 1,
+              "reportCount": 1,
+              "usages": [
+                4288807072
+              ],
+              "isConstant": false,
+              "isArray": false,
+              "isAbsolute": false
+            },
+            {
+              "reportSize": 7,
+              "reportCount": 1,
+              "usages": [],
+              "isConstant": true,
+              "isArray": true,
+              "isAbsolute": true
+            }
+          ]
+        },
+        {
+          "reportId": 14,
+          "items": [
+            {
+              "reportSize": 1,
+              "reportCount": 1,
+              "usages": [
+                4288807068
+              ],
+              "isConstant": false,
+              "isArray": false,
+              "isAbsolute": false
+            },
+            {
+              "reportSize": 7,
+              "reportCount": 1,
+              "usages": [],
+              "isConstant": true,
+              "isArray": true,
+              "isAbsolute": true
+            }
+          ]
+        },
+        {
+          "reportId": 21,
+          "items": [
+            {
+              "reportSize": 1,
+              "reportCount": 9,
+              "usages": [
+                4288807095,
+                4288807093,
+                4288807091,
+                4288807133,
+                4288807097,
+                4288807098,
+                4288807101,
+                4288807134,
+                4288807103
+              ],
+              "isConstant": false,
+              "isArray": false,
+              "isAbsolute": false
+            },
+            {
+              "reportSize": 1,
+              "reportCount": 4,
+              "usages": [
+                4288807099,
+                4288807100,
+                4288807089,
+                4288807090
+              ],
+              "isConstant": false,
+              "isArray": false,
+              "isAbsolute": true
+            },
+            {
+              "reportSize": 1,
+              "reportCount": 3,
+              "usages": [],
+              "isConstant": true,
+              "isArray": true,
+              "isAbsolute": true
+            }
+          ]
+        },
+        {
+          "reportId": 10,
+          "items": [
+            {
+              "reportSize": 16,
+              "reportCount": 1,
+              "usages": [
+                4288807052
+              ],
+              "isConstant": false,
+              "isArray": false,
+              "isAbsolute": true
+            }
+          ]
+        },
+        {
+          "reportId": 9,
+          "items": [
+            {
+              "reportSize": 1,
+              "reportCount": 1,
+              "usages": [
+                4288807050
+              ],
+              "isConstant": false,
+              "isArray": false,
+              "isAbsolute": false
+            },
+            {
+              "reportSize": 7,
+              "reportCount": 1,
+              "usages": [],
+              "isConstant": true,
+              "isArray": true,
+              "isAbsolute": true
+            }
+          ]
+        },
+        {
+          "reportId": 29,
+          "items": [
+            {
+              "reportSize": 1,
+              "reportCount": 1,
+              "usages": [
+                4288806946
+              ],
+              "isConstant": false,
+              "isArray": false,
+              "isAbsolute": false
+            },
+            {
+              "reportSize": 7,
+              "reportCount": 1,
+              "usages": [],
+              "isConstant": true,
+              "isArray": true,
+              "isAbsolute": true
+            }
+          ]
+        },
+        {
+          "reportId": 7,
+          "items": [
+            {
+              "reportSize": 8,
+              "reportCount": 63,
+              "usages": [
+                4288807102
+              ],
+              "isConstant": false,
+              "isArray": false,
+              "isAbsolute": true
+            }
+          ]
+        },
+        {
+          "reportId": 22,
+          "items": [
+            {
+              "reportSize": 8,
+              "reportCount": 63,
+              "usages": [
+                4288806959
+              ],
+              "isConstant": false,
+              "isArray": false,
+              "isAbsolute": true
+            }
+          ]
+        },
+        {
+          "reportId": 11,
+          "items": [
+            {
+              "reportSize": 1,
+              "reportCount": 1,
+              "usages": [
+                4288807138
+              ],
+              "isConstant": false,
+              "isArray": false,
+              "isAbsolute": false
+            },
+            {
+              "reportSize": 7,
+              "reportCount": 1,
+              "usages": [],
+              "isConstant": true,
+              "isArray": true,
+              "isAbsolute": true
+            }
+          ]
+        },
+        {
+          "reportId": 6,
+          "items": [
+            {
+              "reportSize": 1,
+              "reportCount": 1,
+              "usages": [
+                4288807055
+              ],
+              "isConstant": false,
+              "isArray": false,
+              "isAbsolute": false
+            },
+            {
+              "reportSize": 7,
+              "reportCount": 1,
+              "usages": [],
+              "isConstant": true,
+              "isArray": true,
+              "isAbsolute": true
+            }
+          ]
+        },
+        {
+          "reportId": 24,
+          "items": [
+            {
+              "reportSize": 1,
+              "reportCount": 1,
+              "usages": [
+                4288676001
+              ],
+              "isConstant": false,
+              "isArray": false,
+              "isAbsolute": true
+            },
+            {
+              "reportSize": 1,
+              "reportCount": 5,
+              "usages": [
+                4288676023,
+                4288676021,
+                4288676019,
+                4288676017,
+                4288676018
+              ],
+              "isConstant": false,
+              "isArray": false,
+              "isAbsolute": false
+            },
+            {
+              "reportSize": 2,
+              "reportCount": 1,
+              "usages": [],
+              "isConstant": true,
+              "isArray": true,
+              "isAbsolute": true
+            }
+          ]
+        }
+      ],
+      "outputReports": [
+        {
+          "reportId": 5,
+          "items": [
+            {
+              "reportSize": 1,
+              "reportCount": 1,
+              "usages": [
+                524320
+              ],
+              "isConstant": false,
+              "isArray": false,
+              "isAbsolute": true
+            },
+            {
+              "reportSize": 7,
+              "reportCount": 1,
+              "usages": [],
+              "isConstant": true,
+              "isArray": true,
+              "isAbsolute": true
+            }
+          ]
+        },
+        {
+          "reportId": 4,
+          "items": [
+            {
+              "reportSize": 1,
+              "reportCount": 1,
+              "usages": [
+                524311
+              ],
+              "isConstant": false,
+              "isArray": false,
+              "isAbsolute": true
+            },
+            {
+              "reportSize": 7,
+              "reportCount": 1,
+              "usages": [],
+              "isConstant": true,
+              "isArray": true,
+              "isAbsolute": true
+            }
+          ]
+        },
+        {
+          "reportId": 1,
+          "items": [
+            {
+              "reportSize": 1,
+              "reportCount": 1,
+              "usages": [
+                524312
+              ],
+              "isConstant": false,
+              "isArray": false,
+              "isAbsolute": true
+            },
+            {
+              "reportSize": 7,
+              "reportCount": 1,
+              "usages": [],
+              "isConstant": true,
+              "isArray": true,
+              "isAbsolute": true
+            }
+          ]
+        },
+        {
+          "reportId": 3,
+          "items": [
+            {
+              "reportSize": 1,
+              "reportCount": 1,
+              "usages": [
+                524297
+              ],
+              "isConstant": false,
+              "isArray": false,
+              "isAbsolute": true
+            },
+            {
+              "reportSize": 7,
+              "reportCount": 1,
+              "usages": [],
+              "isConstant": true,
+              "isArray": true,
+              "isAbsolute": true
+            }
+          ]
+        },
+        {
+          "reportId": 2,
+          "items": [
+            {
+              "reportSize": 1,
+              "reportCount": 1,
+              "usages": [
+                524318
+              ],
+              "isConstant": false,
+              "isArray": false,
+              "isAbsolute": true
+            },
+            {
+              "reportSize": 7,
+              "reportCount": 1,
+              "usages": [],
+              "isConstant": true,
+              "isArray": true,
+              "isAbsolute": true
+            }
+          ]
+        },
+        {
+          "reportId": 22,
+          "items": [
+            {
+              "reportSize": 8,
+              "reportCount": 63,
+              "usages": [
+                4288806959
+              ],
+              "isConstant": false,
+              "isArray": false,
+              "isAbsolute": true
+            }
+          ]
+        },
+        {
+          "reportId": 15,
+          "items": [
+            {
+              "reportSize": 1,
+              "reportCount": 1,
+              "usages": [
+                4288807133
+              ],
+              "isConstant": false,
+              "isArray": false,
+              "isAbsolute": false
+            },
+            {
+              "reportSize": 7,
+              "reportCount": 1,
+              "usages": [],
+              "isConstant": true,
+              "isArray": true,
+              "isAbsolute": true
+            }
+          ]
+        },
+        {
+          "reportId": 14,
+          "items": [
+            {
+              "reportSize": 1,
+              "reportCount": 1,
+              "usages": [
+                4288807129
+              ],
+              "isConstant": false,
+              "isArray": false,
+              "isAbsolute": false
+            },
+            {
+              "reportSize": 7,
+              "reportCount": 1,
+              "usages": [],
+              "isConstant": true,
+              "isArray": true,
+              "isAbsolute": true
+            }
+          ]
+        },
+        {
+          "reportId": 10,
+          "items": [
+            {
+              "reportSize": 1,
+              "reportCount": 1,
+              "usages": [
+                4288807123
+              ],
+              "isConstant": false,
+              "isArray": false,
+              "isAbsolute": true
+            },
+            {
+              "reportSize": 7,
+              "reportCount": 1,
+              "usages": [],
+              "isConstant": true,
+              "isArray": true,
+              "isAbsolute": true
+            }
+          ]
+        },
+        {
+          "reportId": 20,
+          "items": [
+            {
+              "reportSize": 1,
+              "reportCount": 1,
+              "usages": [
+                4288807132
+              ],
+              "isConstant": false,
+              "isArray": false,
+              "isAbsolute": true
+            },
+            {
+              "reportSize": 7,
+              "reportCount": 1,
+              "usages": [],
+              "isConstant": true,
+              "isArray": true,
+              "isAbsolute": true
+            }
+          ]
+        },
+        {
+          "reportId": 9,
+          "items": [
+            {
+              "reportSize": 2,
+              "reportCount": 1,
+              "usages": [
+                4288807122
+              ],
+              "isConstant": false,
+              "isArray": false,
+              "isAbsolute": true
+            },
+            {
+              "reportSize": 6,
+              "reportCount": 1,
+              "usages": [],
+              "isConstant": true,
+              "isArray": true,
+              "isAbsolute": true
+            }
+          ]
+        },
+        {
+          "reportId": 7,
+          "items": [
+            {
+              "reportSize": 8,
+              "reportCount": 63,
+              "usages": [
+                4288807102
+              ],
+              "isConstant": false,
+              "isArray": false,
+              "isAbsolute": true
+            }
+          ]
+        },
+        {
+          "reportId": 19,
+          "items": [
+            {
+              "reportSize": 1,
+              "reportCount": 1,
+              "usages": [
+                4288807070
+              ],
+              "isConstant": false,
+              "isArray": false,
+              "isAbsolute": true
+            },
+            {
+              "reportSize": 7,
+              "reportCount": 1,
+              "usages": [],
+              "isConstant": true,
+              "isArray": true,
+              "isAbsolute": true
+            }
+          ]
+        },
+        {
+          "reportId": 8,
+          "items": [
+            {
+              "reportSize": 1,
+              "reportCount": 2,
+              "usages": [
+                4288807064,
+                4288807063
+              ],
+              "isConstant": false,
+              "isArray": false,
+              "isAbsolute": false
+            },
+            {
+              "reportSize": 6,
+              "reportCount": 1,
+              "usages": [],
+              "isConstant": true,
+              "isArray": true,
+              "isAbsolute": true
+            }
+          ]
+        },
+        {
+          "reportId": 13,
+          "items": [
+            {
+              "reportSize": 2,
+              "reportCount": 1,
+              "usages": [
+                4288807093
+              ],
+              "isConstant": false,
+              "isArray": false,
+              "isAbsolute": true
+            },
+            {
+              "reportSize": 6,
+              "reportCount": 1,
+              "usages": [],
+              "isConstant": true,
+              "isArray": true,
+              "isAbsolute": true
+            }
+          ]
+        },
+        {
+          "reportId": 35,
+          "items": [
+            {
+              "reportSize": 8,
+              "reportCount": 1,
+              "usages": [
+                4288806963
+              ],
+              "isConstant": false,
+              "isArray": false,
+              "isAbsolute": true
+            }
+          ]
+        },
+        {
+          "reportId": 29,
+          "items": [
+            {
+              "reportSize": 2,
+              "reportCount": 1,
+              "usages": [
+                4288806946
+              ],
+              "isConstant": false,
+              "isArray": false,
+              "isAbsolute": true
+            },
+            {
+              "reportSize": 6,
+              "reportCount": 1,
+              "usages": [],
+              "isConstant": true,
+              "isArray": true,
+              "isAbsolute": true
+            }
+          ]
+        },
+        {
+          "reportId": 6,
+          "items": [
+            {
+              "reportSize": 2,
+              "reportCount": 1,
+              "usages": [
+                4288807055
+              ],
+              "isConstant": false,
+              "isArray": false,
+              "isAbsolute": false
+            },
+            {
+              "reportSize": 6,
+              "reportCount": 1,
+              "usages": [],
+              "isConstant": true,
+              "isArray": true,
+              "isAbsolute": true
+            }
+          ]
+        },
+        {
+          "reportId": 28,
+          "items": [
+            {
+              "reportSize": 1,
+              "reportCount": 1,
+              "usages": [
+                4288676060
+              ],
+              "isConstant": false,
+              "isArray": false,
+              "isAbsolute": true
+            },
+            {
+              "reportSize": 7,
+              "reportCount": 1,
+              "usages": [],
+              "isConstant": true,
+              "isArray": true,
+              "isAbsolute": true
+            }
+          ]
+        },
+        {
+          "reportId": 27,
+          "items": [
+            {
+              "reportSize": 1,
+              "reportCount": 1,
+              "usages": [
+                4288675983
+              ],
+              "isConstant": false,
+              "isArray": false,
+              "isAbsolute": true
+            },
+            {
+              "reportSize": 7,
+              "reportCount": 1,
+              "usages": [],
+              "isConstant": true,
+              "isArray": true,
+              "isAbsolute": true
+            }
+          ]
+        },
+        {
+          "reportId": 26,
+          "items": [
+            {
+              "reportSize": 1,
+              "reportCount": 1,
+              "usages": [
+                4288675981
+              ],
+              "isConstant": false,
+              "isArray": false,
+              "isAbsolute": true
+            },
+            {
+              "reportSize": 7,
+              "reportCount": 1,
+              "usages": [],
+              "isConstant": true,
+              "isArray": true,
+              "isAbsolute": true
+            }
+          ]
+        },
+        {
+          "reportId": 25,
+          "items": [
+            {
+              "reportSize": 1,
+              "reportCount": 1,
+              "usages": [
+                4288675998
+              ],
+              "isConstant": false,
+              "isArray": false,
+              "isAbsolute": true
+            },
+            {
+              "reportSize": 7,
+              "reportCount": 1,
+              "usages": [],
+              "isConstant": true,
+              "isArray": true,
+              "isAbsolute": true
+            }
+          ]
+        },
+        {
+          "reportId": 24,
+          "items": [
+            {
+              "reportSize": 1,
+              "reportCount": 1,
+              "usages": [
+                4288676001
+              ],
+              "isConstant": false,
+              "isArray": false,
+              "isAbsolute": true
+            },
+            {
+              "reportSize": 7,
+              "reportCount": 1,
+              "usages": [],
+              "isConstant": true,
+              "isArray": true,
+              "isAbsolute": true
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

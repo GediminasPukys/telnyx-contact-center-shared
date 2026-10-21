@@ -10,7 +10,7 @@ import { renewUserTelephonyCredential } from "../lib/telnyx-credentials.js";
 // user had none at all, so an expired one stayed expired and the agent's
 // softphone simply stopped working — on the web portal as well as on mobile.
 
-const USER = { id: "user-1", username: "agent@telnyx.com", first_name: "A", last_name: "B" };
+const USER = { id: "user-1", username: "agent@example.com", first_name: "A", last_name: "B" };
 
 const routeSource = await readFile(new URL("../app/api/voice/token/route.js", import.meta.url), "utf8");
 

@@ -53,7 +53,7 @@ async function GET_handler(request, _context, authz) {
     const effectiveStatus = effectiveAgentStatusSql("ast");
     const usersRes = await pool.query(
       `SELECT u.id, u.username, u.first_name, u.last_name, u.nick, u.mobile, u.voice_number,
-              u.telephony_user_name, u.profile_picture_uri, ${effectiveStatus} AS agent_status
+              u.telephony_user_name, u.extension, u.profile_picture_uri, ${effectiveStatus} AS agent_status
        FROM users u
        LEFT JOIN acd_agent_state ast ON ast.agent_id = u.id
        WHERE (u.mobile IS NOT NULL AND u.mobile != '')

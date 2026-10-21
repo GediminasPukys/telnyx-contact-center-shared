@@ -56,6 +56,7 @@ for (const path of ["app/api/phone-numbers/route.js", "app/api/phone-numbers/[id
 test("direct intent cancellation rejects a foreign direct reservation", async () => {
   let cancellations = 0;
   const route = await loadRoute("app/api/voice/direct-intent/route.js", {
+    "@/lib/diagnostic-logger.mjs": { createDiagnosticLogger: () => ({ error() {} }) },
     "@/lib/auth-server": { getAuthenticatedUser: async () => ({ id: "agent-a", username: "agent-a", roles: ["agent"] }) },
     "@/lib/postgres.mjs": { getPostgresPool: () => ({ query: async () => ({ rows: [{ id: "11111111-1111-4111-8111-111111111111", agent_id: "agent-b", work_item_id: "work-a", purpose: "manual_outbound" }] }) }) },
     "@/lib/acd/direct-capacity.mjs": {
@@ -78,6 +79,7 @@ test("direct intent cancellation accepts the authorized source interaction", asy
     return { rows: [], rowCount: 0 };
   } };
   const route = await loadRoute("app/api/voice/direct-intent/route.js", {
+    "@/lib/diagnostic-logger.mjs": { createDiagnosticLogger: () => ({ error() {} }) },
     "@/lib/auth-server": { getAuthenticatedUser: async () => ({ id: "initiator", username: "agent-a", roles: ["agent"] }) },
     "@/lib/postgres.mjs": { getPostgresPool: () => pool },
     "@/lib/acd/direct-capacity.mjs": {
@@ -95,6 +97,7 @@ test("direct intent cancellation accepts the authorized source interaction", asy
 test("direct intent cancellation rejects malformed UUIDs before database access", async () => {
   let queries = 0;
   const route = await loadRoute("app/api/voice/direct-intent/route.js", {
+    "@/lib/diagnostic-logger.mjs": { createDiagnosticLogger: () => ({ error() {} }) },
     "@/lib/auth-server": { getAuthenticatedUser: async () => ({ id: "agent-a", username: "agent-a", roles: ["agent"] }) },
     "@/lib/postgres.mjs": { getPostgresPool: () => ({ query: async () => { queries++; throw new Error("Unexpected database access"); } }) },
     "@/lib/acd/direct-capacity.mjs": {

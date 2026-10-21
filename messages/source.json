@@ -53,7 +53,10 @@
       "components/contact-center/handoff/DeviceHandoffDialog.jsx",
       "components/contact-center/handoff/HandoffParts.jsx",
       "components/widget-admin/VideoConferenceSettings.jsx",
-      "components/voice-flow/AssistantInviteSettings.jsx"
+      "components/voice-flow/AssistantInviteSettings.jsx",
+      "app/(portal)/admin/phones-provisioning/page.jsx",
+      "app/(portal)/admin/system/extensions/page.jsx",
+      "components/telephony/CompactPhonePicker.jsx"
     ]
   },
   "md9a6e969": {
@@ -343,7 +346,9 @@
       "components/whatsapp/WhatsAppAdmin.jsx",
       "app/(portal)/admin/system/settings/ai-copilot/page.jsx",
       "components/admin/SystemSectionNav.jsx",
-      "components/contact-center/ChatContextPanel.jsx"
+      "components/contact-center/ChatContextPanel.jsx",
+      "components/help/HelpTopicContent.jsx",
+      "lib/help/help-registry.js"
     ]
   },
   "mea31c356": {
@@ -1159,7 +1164,12 @@
       "app/(portal)/admin/wrapup-codes/page.jsx",
       "app/(portal)/settings/page.jsx",
       "app/(portal)/supervisor/scheduled-events/page.jsx",
-      "app/(portal)/admin/system/settings/ai-copilot/page.jsx"
+      "app/(portal)/admin/system/settings/ai-copilot/page.jsx",
+      "components/telephony/StationAdministration.jsx",
+      "app/(portal)/admin/system/extensions/page.jsx",
+      "components/telephony/CompactPhonePicker.jsx",
+      "components/voice-flow/AssistantEventDestinationConfirmation.jsx",
+      "components/login-form.jsx"
     ]
   },
   "m74119e7f": {
@@ -1176,7 +1186,8 @@
       "components/tools/ToolEditSheet.jsx",
       "app/(portal)/admin/system/settings/ai-copilot/page.jsx",
       "app/(portal)/admin/system/settings/page.jsx",
-      "app/(portal)/profile/page.jsx"
+      "app/(portal)/profile/page.jsx",
+      "components/admin/HeadsetRolloutSettings.jsx"
     ]
   },
   "m4d2d5d68": {
@@ -1244,7 +1255,8 @@
       "components/contact-center/MultichannelDashboard.jsx",
       "components/assistants/AssistantDashboardTab.jsx",
       "components/assistants/AssistantSchemaFields.jsx",
-      "components/widget-admin/VideoConferenceSettings.jsx"
+      "components/widget-admin/VideoConferenceSettings.jsx",
+      "components/telephony/StationAdministration.jsx"
     ]
   },
   "m9c86e43e": {
@@ -1262,7 +1274,8 @@
       "app/(portal)/admin/queues/page.jsx",
       "app/(portal)/profile/page.jsx",
       "lib/i18n/interaction-labels.mjs",
-      "components/assistants/AssistantSchemaFields.jsx"
+      "components/assistants/AssistantSchemaFields.jsx",
+      "components/telephony/StationAdministration.jsx"
     ]
   },
   "m6d7302f2": {
@@ -2575,7 +2588,9 @@
       "app/(portal)/supervisor/outbound-dialer/page.jsx",
       "app/(portal)/supervisor/quality/page.jsx",
       "app/(portal)/supervisor/scheduled-events/page.jsx",
-      "components/assistants/TelnyxAvatarLibrary.jsx"
+      "components/assistants/TelnyxAvatarLibrary.jsx",
+      "components/telephony/StationPhoneMenu.jsx",
+      "components/headsets/HeadsetStatusBadge.jsx"
     ]
   },
   "m56e8eb60": {
@@ -3092,7 +3107,10 @@
       "components/scheduled-events/PreviewSheet.jsx",
       "app/(portal)/admin/workflows/[id]/test/page.jsx",
       "app/(portal)/supervisor/call-history/[id]/page.jsx",
-      "config/voice-flow-nodes.js"
+      "config/voice-flow-nodes.js",
+      "components/contact-center/AgentAssist.jsx",
+      "components/contact-center/AgentAssistWorkflow.jsx",
+      "components/contact-center/WorkflowHistoryView.jsx"
     ]
   },
   "m894a26e5": {
@@ -3422,7 +3440,8 @@
       "components/email/EmailRecipients.jsx",
       "app/(portal)/admin/ai-assistants/pronunciation-dictionaries/page.jsx",
       "app/(portal)/admin/phones-provisioning/page.jsx",
-      "app/(portal)/supervisor/outbound-dialer/page.jsx"
+      "app/(portal)/supervisor/outbound-dialer/page.jsx",
+      "components/queues/OutboundNumberSelect.jsx"
     ]
   },
   "mdce2da08": {
@@ -3434,7 +3453,8 @@
       "components/forms/FormRenderer.jsx",
       "app/(portal)/admin/ai-assistants/pronunciation-dictionaries/page.jsx",
       "app/(portal)/admin/phones-provisioning/page.jsx",
-      "app/(portal)/supervisor/outbound-dialer/page.jsx"
+      "app/(portal)/supervisor/outbound-dialer/page.jsx",
+      "components/queues/OutboundNumberSelect.jsx"
     ]
   },
   "m6f6e6ae8": {
@@ -3529,7 +3549,8 @@
       "components/assistants/AssistantToolEditSheet.jsx",
       "components/assistants/DynamicVariablesTestSheet.jsx",
       "components/assistants/tools/WebhookTestSheet.jsx",
-      "components/tools/ToolEditSheet.jsx"
+      "components/tools/ToolEditSheet.jsx",
+      "components/headsets/HeadsetStatusBadge.jsx"
     ]
   },
   "mb35aa68d": {
@@ -3549,7 +3570,9 @@
       "components/forms/FormEditor.jsx",
       "components/permissions/RolesTable.jsx",
       "app/(portal)/admin/forms/page.jsx",
-      "app/(portal)/admin/insights/page.jsx"
+      "app/(portal)/admin/insights/page.jsx",
+      "components/telephony/StationAdministration.jsx",
+      "app/(portal)/admin/system/extensions/page.jsx"
     ]
   },
   "m0ae8097f": {
@@ -3951,7 +3974,8 @@
       "components/assistants/AssistantWorkflowTab.jsx",
       "components/contact-center/AgentAssistWorkflow.jsx",
       "components/contact-center/WorkflowHistoryView.jsx",
-      "app/(portal)/supervisor/monitor/page.jsx"
+      "app/(portal)/supervisor/monitor/page.jsx",
+      "components/telephony/ExtensionAssignment.jsx"
     ]
   },
   "m21e5581d": {
@@ -4509,7 +4533,10 @@
       "components/tasks/EditSheet.jsx",
       "app/(portal)/supervisor/call-history/[id]/page.jsx",
       "components/contact-center/ConversationPreview.jsx",
-      "components/sms/SmsAdmin.jsx"
+      "components/sms/SmsAdmin.jsx",
+      "components/telephony/ExtensionAssignment.jsx",
+      "components/telephony/ExtensionDirectory.jsx",
+      "components/telephony/StationAdministration.jsx"
     ]
   },
   "m08793843": {
@@ -4530,7 +4557,8 @@
     "source": "No numbers found",
     "files": [
       "components/assistants/CallingSettingsPanel.jsx",
-      "components/assistants/MessagingSettingsPanel.jsx"
+      "components/assistants/MessagingSettingsPanel.jsx",
+      "components/queues/OutboundNumberSelect.jsx"
     ]
   },
   "m1b56f6f5": {
@@ -4583,7 +4611,9 @@
     "files": [
       "components/assistants/CallingTab.jsx",
       "components/assistants/IntegrationsSettingsPanel.jsx",
-      "components/assistants/MessagingTab.jsx"
+      "components/assistants/MessagingTab.jsx",
+      "app/(portal)/admin/system/extensions/page.jsx",
+      "components/telephony/ExtensionDirectory.jsx"
     ]
   },
   "m7774dd55": {
@@ -6022,7 +6052,8 @@
       "app/(portal)/supervisor/scheduled-events/page.jsx",
       "components/contact-center/InteractionRecordPreview.jsx",
       "components/contact-center/LiveInteractionsView.jsx",
-      "components/contact-center/LiveInteractionDetails.jsx"
+      "components/contact-center/LiveInteractionDetails.jsx",
+      "components/telephony/PhoneSurface.jsx"
     ]
   },
   "m8fa08d81": {
@@ -7212,7 +7243,8 @@
     "source": "Call audio",
     "files": [
       "components/assistants/VoicePicker.jsx",
-      "lib/headsets/headset-device-catalog.js"
+      "lib/headsets/headset-device-catalog.js",
+      "components/headsets/HeadsetStatusBadge.jsx"
     ]
   },
   "m2635edea": {
@@ -8023,7 +8055,8 @@
       "app/(portal)/admin/workflows/[id]/page.jsx",
       "components/assistants/AssistantChangeReview.jsx",
       "components/contact-center/handoff/DeviceHandoffDialog.jsx",
-      "components/widget-admin/VideoConferenceHistory.jsx"
+      "components/widget-admin/VideoConferenceHistory.jsx",
+      "components/headsets/HeadsetStatusBadge.jsx"
     ]
   },
   "m0c62d7e5": {
@@ -9490,7 +9523,8 @@
       "app/set-password/[token]/page.jsx",
       "app/signin/page.jsx",
       "app/signup/page.jsx",
-      "lib/logger/topic-catalog.mjs"
+      "lib/logger/topic-catalog.mjs",
+      "components/auth-page-layout.jsx"
     ]
   },
   "m0d6d21a1": {
@@ -9638,7 +9672,8 @@
   "m732bdad5": {
     "source": "Checking…",
     "files": [
-      "components/contact-center/AcdOperationsPanel.jsx"
+      "components/contact-center/AcdOperationsPanel.jsx",
+      "components/voice-flow/AssistantInviteSettings.jsx"
     ]
   },
   "m77693119": {
@@ -10923,7 +10958,8 @@
       "app/(portal)/supervisor/scheduled-events/page.jsx",
       "components/contact-center/InteractionRecordPreview.jsx",
       "components/contact-center/LiveInteractionsView.jsx",
-      "components/contact-center/LiveInteractionDetails.jsx"
+      "components/contact-center/LiveInteractionDetails.jsx",
+      "components/telephony/PhoneSurface.jsx"
     ]
   },
   "m4c981f76": {
@@ -10942,7 +10978,8 @@
       "components/softphone-mini.jsx",
       "components/softphone.jsx",
       "components/whatsapp/WhatsAppAdmin.jsx",
-      "app/(portal)/supervisor/outbound-dialer/page.jsx"
+      "app/(portal)/supervisor/outbound-dialer/page.jsx",
+      "components/telephony/PhoneSurface.jsx"
     ]
   },
   "m1c6911f5": {
@@ -11206,7 +11243,10 @@
       "app/(portal)/admin/call-flows/[id]/page.jsx",
       "app/(portal)/admin/workflows/[id]/page.jsx",
       "app/(portal)/profile/page.jsx",
-      "app/(portal)/settings/page.jsx"
+      "app/(portal)/settings/page.jsx",
+      "components/telephony/ExtensionAssignment.jsx",
+      "components/telephony/ExtensionDirectory.jsx",
+      "components/telephony/StationAdministration.jsx"
     ]
   },
   "mddc1dcf6": {
@@ -12136,7 +12176,9 @@
       "components/contact-center/CobrowseInteractionWorkspace.jsx",
       "components/widget-admin/WidgetAdmin.jsx",
       "lib/authz/permissions.mjs",
-      "components/widget-admin/WidgetStudioControls.jsx"
+      "components/widget-admin/WidgetStudioControls.jsx",
+      "components/help/HelpTopicContent.jsx",
+      "lib/help/help-registry.js"
     ]
   },
   "m3161d43a": {
@@ -12996,7 +13038,8 @@
       "components/softphone-mini.jsx",
       "components/softphone.jsx",
       "app/(portal)/admin/phones-provisioning/page.jsx",
-      "app/(portal)/admin/system/settings/page.jsx"
+      "app/(portal)/admin/system/settings/page.jsx",
+      "components/telephony/NativePhoneControls.jsx"
     ]
   },
   "m0bd501c0": {
@@ -13832,7 +13875,9 @@
       "lib/help/help-registry.js",
       "components/help/HelpTopicContent.jsx",
       "lib/logger/topic-catalog.mjs",
-      "components/widget-admin/IconPicker.jsx"
+      "components/widget-admin/IconPicker.jsx",
+      "app/(portal)/admin/system/extensions/page.jsx",
+      "components/telephony/ExtensionDirectory.jsx"
     ]
   },
   "mdb7adfe7": {
@@ -14058,7 +14103,8 @@
       "components/assistants/IntegrationsTab.jsx",
       "components/contact-center/LiveInteractionsView.jsx",
       "lib/logger/topic-catalog.mjs",
-      "components/assistants/AssistantToolEditSheet.jsx"
+      "components/assistants/AssistantToolEditSheet.jsx",
+      "components/telephony/PhoneSurface.jsx"
     ]
   },
   "m3e892b4d": {
@@ -14773,7 +14819,9 @@
       "components/media-library/MediaPlayer.jsx",
       "components/softphone-mini.jsx",
       "components/softphone.jsx",
-      "app/(portal)/admin/phones-provisioning/page.jsx"
+      "app/(portal)/admin/phones-provisioning/page.jsx",
+      "components/telephony/NativePhoneControls.jsx",
+      "components/telephony/PhoneSurface.jsx"
     ]
   },
   "m3f609f74": {
@@ -14787,7 +14835,9 @@
       "components/softphone-mini.jsx",
       "components/softphone.jsx",
       "lib/headsets/headset-device-catalog.js",
-      "app/(portal)/admin/phones-provisioning/page.jsx"
+      "app/(portal)/admin/phones-provisioning/page.jsx",
+      "components/telephony/NativePhoneControls.jsx",
+      "components/telephony/PhoneSurface.jsx"
     ]
   },
   "m1f59e062": {
@@ -15168,7 +15218,8 @@
       "components/softphone-mini.jsx",
       "components/softphone.jsx",
       "components/contact-center/VoiceInteractionActions.jsx",
-      "components/contact-center/handoff/HandoffParts.jsx"
+      "components/contact-center/handoff/HandoffParts.jsx",
+      "components/telephony/PhoneSurface.jsx"
     ]
   },
   "mf94ea0ff": {
@@ -15179,7 +15230,9 @@
       "components/softphone.jsx",
       "app/(portal)/admin/phones-provisioning/page.jsx",
       "components/contact-center/VoiceInteractionActions.jsx",
-      "components/contact-center/handoff/HandoffParts.jsx"
+      "components/contact-center/handoff/HandoffParts.jsx",
+      "components/telephony/NativePhoneControls.jsx",
+      "components/telephony/PhoneSurface.jsx"
     ]
   },
   "m05e2edc3": {
@@ -15188,7 +15241,8 @@
       "components/contact-center/SupervisionModal.jsx",
       "components/contact-center/TransferModal.jsx",
       "components/softphone-mini.jsx",
-      "components/softphone.jsx"
+      "components/softphone.jsx",
+      "components/telephony/PhoneSurface.jsx"
     ]
   },
   "mc55bb807": {
@@ -15272,7 +15326,9 @@
       "app/(portal)/admin/system/settings/page.jsx",
       "components/i18n/use-ui-text.jsx",
       "lib/i18n/status-labels.mjs",
-      "components/contact-center/MultichannelDashboard.jsx"
+      "components/contact-center/MultichannelDashboard.jsx",
+      "components/telephony/PhoneSelection.jsx",
+      "components/telephony/StationAdministration.jsx"
     ]
   },
   "m8505a850": {
@@ -15659,7 +15715,8 @@
   "me99b315c": {
     "source": "WebRTC",
     "files": [
-      "components/contact-center/TelephonyAddress.jsx"
+      "components/contact-center/TelephonyAddress.jsx",
+      "components/telephony/StationAdministration.jsx"
     ]
   },
   "m9f7c4dc1": {
@@ -15920,7 +15977,9 @@
       "lib/help/help-registry.js",
       "components/help/HelpTopicContent.jsx",
       "lib/logger/topic-catalog.mjs",
-      "components/permissions/RolesTable.jsx"
+      "components/permissions/RolesTable.jsx",
+      "app/(portal)/admin/system/extensions/page.jsx",
+      "components/telephony/ExtensionDirectory.jsx"
     ]
   },
   "m90c889de": {
@@ -16344,13 +16403,16 @@
   "mbf523a56": {
     "source": "Call devices",
     "files": [
-      "components/contact-center/VoiceEndpointSelector.jsx"
+      "components/contact-center/VoiceEndpointSelector.jsx",
+      "components/help/HelpTopicContent.jsx",
+      "lib/help/help-registry.js"
     ]
   },
   "ma970ef8b": {
     "source": "Switching…",
     "files": [
-      "components/contact-center/VoiceEndpointSelector.jsx"
+      "components/contact-center/VoiceEndpointSelector.jsx",
+      "components/telephony/CompactPhonePicker.jsx"
     ]
   },
   "mf54bb2f9": {
@@ -18265,7 +18327,8 @@
       "components/numbers/NumberEditSheet.jsx",
       "components/numbers/NumbersInventoryTab.jsx",
       "components/numbers/NumbersSearchTab.jsx",
-      "components/whatsapp/WhatsAppAdmin.jsx"
+      "components/whatsapp/WhatsAppAdmin.jsx",
+      "components/schedules/ExceptionCalendarEditor.jsx"
     ]
   },
   "mecc6017a": {
@@ -18694,7 +18757,8 @@
     "files": [
       "components/data-sources/KbArticlesView.jsx",
       "components/kb-articles/EditSheet.jsx",
-      "lib/i18n/interaction-labels.mjs"
+      "lib/i18n/interaction-labels.mjs",
+      "app/(portal)/admin/system/schedules/page.jsx"
     ]
   },
   "maf5c5293": {
@@ -21100,7 +21164,8 @@
     "source": "End",
     "files": [
       "components/forms/FormEditor.jsx",
-      "components/softphone.jsx"
+      "components/softphone.jsx",
+      "components/telephony/PhoneSurface.jsx"
     ]
   },
   "m6876547d": {
@@ -21878,7 +21943,8 @@
   "m1ef2c91b": {
     "source": "Continue with Google",
     "files": [
-      "components/login-form.jsx"
+      "components/login-form.jsx",
+      "app/signin/desktop/sign-in.jsx"
     ]
   },
   "m42148d10": {
@@ -22581,7 +22647,8 @@
   "me58e64da": {
     "source": "Object",
     "files": [
-      "components/permissions/OperationsMatrix.jsx"
+      "components/permissions/OperationsMatrix.jsx",
+      "app/(portal)/admin/system/extensions/page.jsx"
     ]
   },
   "me6992b0c": {
@@ -24806,27 +24873,31 @@
     "source": "Select number from contacts",
     "files": [
       "components/softphone-mini.jsx",
-      "components/softphone.jsx"
+      "components/softphone.jsx",
+      "components/telephony/PhoneSurface.jsx"
     ]
   },
   "mf873d6ce": {
     "source": "From: {value0}",
     "files": [
-      "components/softphone-mini.jsx"
+      "components/softphone-mini.jsx",
+      "components/telephony/PhoneSurface.jsx"
     ]
   },
   "m3a8a18c5": {
     "source": "Click to select number",
     "files": [
       "components/softphone-mini.jsx",
-      "components/softphone.jsx"
+      "components/softphone.jsx",
+      "components/telephony/PhoneSurface.jsx"
     ]
   },
   "mbd6feae7": {
     "source": "Phone number or SIP URI",
     "files": [
       "components/softphone-mini.jsx",
-      "components/softphone.jsx"
+      "components/softphone.jsx",
+      "components/telephony/PhoneSurface.jsx"
     ]
   },
   "m29b02b2e": {
@@ -24835,13 +24906,16 @@
       "components/softphone-mini.jsx",
       "app/(portal)/admin/phones-provisioning/page.jsx",
       "components/contact-center/VoiceInteractionActions.jsx",
-      "components/assistants/IntegrationsSettingsPanel.jsx"
+      "components/assistants/IntegrationsSettingsPanel.jsx",
+      "components/telephony/NativePhoneControls.jsx",
+      "components/telephony/PhoneSurface.jsx"
     ]
   },
   "m265b3430": {
     "source": "Show phone",
     "files": [
-      "components/softphone-mini.jsx"
+      "components/softphone-mini.jsx",
+      "components/telephony/PhoneSurface.jsx"
     ]
   },
   "m3d965d8b": {
@@ -24902,20 +24976,23 @@
   "mfdbfd40f": {
     "source": "Incoming caller: {value0}",
     "files": [
-      "components/softphone.jsx"
+      "components/softphone.jsx",
+      "components/telephony/PhoneSurface.jsx"
     ]
   },
   "m5df418a4": {
     "source": "Voice number from your profile",
     "files": [
-      "components/softphone.jsx"
+      "components/softphone.jsx",
+      "components/telephony/PhoneSurface.jsx"
     ]
   },
   "mfe1ae2fa": {
     "source": "DTMF",
     "files": [
       "components/softphone.jsx",
-      "app/(portal)/admin/call-generator/page.jsx"
+      "app/(portal)/admin/call-generator/page.jsx",
+      "components/telephony/PhoneSurface.jsx"
     ]
   },
   "mb6734995": {
@@ -25150,7 +25227,8 @@
   "m427b7b61": {
     "source": "Search users",
     "files": [
-      "components/teams/EditSheet.jsx"
+      "components/teams/EditSheet.jsx",
+      "components/telephony/StationAdministration.jsx"
     ]
   },
   "m0939ae1c": {
@@ -25211,7 +25289,8 @@
       "app/(portal)/agent/configuration/page.jsx",
       "app/test/voice-harness/page.jsx",
       "config/menu.jsx",
-      "lib/authz/permissions.mjs"
+      "lib/authz/permissions.mjs",
+      "app/(portal)/admin/system/extensions/page.jsx"
     ]
   },
   "m39dafdf1": {
@@ -29860,7 +29939,8 @@
   "m98a79e97": {
     "source": "Phone connection and call devices",
     "files": [
-      "components/voice-recovery-badge.jsx"
+      "components/voice-recovery-badge.jsx",
+      "components/telephony/StationPhoneMenu.jsx"
     ]
   },
   "maf321f30": {
@@ -32001,7 +32081,8 @@
     "source": "Availability",
     "files": [
       "components/widget-admin/WidgetStudioControls.jsx",
-      "app/(portal)/supervisor/analytics/page.jsx"
+      "app/(portal)/supervisor/analytics/page.jsx",
+      "components/schedules/ExceptionCalendarEditor.jsx"
     ]
   },
   "m70534981": {
@@ -33328,7 +33409,8 @@
     "files": [
       "components/widget-admin/WidgetStudioControls.jsx",
       "components/widget-admin/IconPicker.jsx",
-      "components/contact-center/DiarizedTranscript.jsx"
+      "components/contact-center/DiarizedTranscript.jsx",
+      "components/headsets/HeadsetStatusBadge.jsx"
     ]
   },
   "me3cec459": {
@@ -34951,7 +35033,9 @@
     "files": [
       "app/(portal)/admin/ai-assistants/pronunciation-dictionaries/page.jsx",
       "components/assistants/AiAssistantsSectionNav.jsx",
-      "lib/authz/permissions.mjs"
+      "lib/authz/permissions.mjs",
+      "components/help/HelpTopicContent.jsx",
+      "lib/help/help-registry.js"
     ]
   },
   "m4d80daff": {
@@ -37736,7 +37820,9 @@
     "files": [
       "app/(portal)/admin/permissions/page.jsx",
       "components/admin/ConfigurationSectionNav.jsx",
-      "lib/authz/permissions.mjs"
+      "lib/authz/permissions.mjs",
+      "components/help/HelpTopicContent.jsx",
+      "lib/help/help-registry.js"
     ]
   },
   "mf6234f48": {
@@ -38163,8 +38249,8 @@
       "app/(portal)/admin/phones-provisioning/page.jsx"
     ]
   },
-  "mdd81bcbc": {
-    "source": "00:90:8f:56:10:a5",
+  "m5f9f75ed": {
+    "source": "00:90:8f:00:00:01",
     "files": [
       "app/(portal)/admin/phones-provisioning/page.jsx"
     ]
@@ -38251,7 +38337,8 @@
     "source": "SIP username",
     "files": [
       "app/(portal)/admin/phones-provisioning/page.jsx",
-      "components/assistants/AssistantSchemaFields.jsx"
+      "components/assistants/AssistantSchemaFields.jsx",
+      "components/telephony/StationAdministration.jsx"
     ]
   },
   "m9f1fe1f2": {
@@ -38450,7 +38537,8 @@
     "source": "Resume",
     "files": [
       "app/(portal)/admin/phones-provisioning/page.jsx",
-      "app/(portal)/admin/workflows/[id]/test/page.jsx"
+      "app/(portal)/admin/workflows/[id]/test/page.jsx",
+      "components/telephony/NativePhoneControls.jsx"
     ]
   },
   "m20648312": {
@@ -39086,7 +39174,8 @@
       "app/(portal)/admin/system/dashboard/page.jsx",
       "app/(portal)/profile/page.jsx",
       "components/contact-center/MultichannelDashboard.jsx",
-      "components/assistants/AssistantDashboardTab.jsx"
+      "components/assistants/AssistantDashboardTab.jsx",
+      "components/contact-center/NumberSelectionModal.jsx"
     ]
   },
   "m08c14359": {
@@ -39110,7 +39199,9 @@
   "m3ffd8b28": {
     "source": "System Dashboard",
     "files": [
-      "app/(portal)/admin/system/dashboard/page.jsx"
+      "app/(portal)/admin/system/dashboard/page.jsx",
+      "components/help/HelpTopicContent.jsx",
+      "lib/help/help-registry.js"
     ]
   },
   "mbf5fb2d0": {
@@ -39345,7 +39436,9 @@
   "m19f5d079": {
     "source": "System Settings",
     "files": [
-      "app/(portal)/admin/system/settings/page.jsx"
+      "app/(portal)/admin/system/settings/page.jsx",
+      "components/help/HelpTopicContent.jsx",
+      "lib/help/help-registry.js"
     ]
   },
   "mf251dea9": {
@@ -39621,7 +39714,9 @@
       "app/(portal)/admin/teams/page.jsx",
       "components/admin/ConfigurationSectionNav.jsx",
       "lib/authz/permissions.mjs",
-      "components/permissions/RolesTable.jsx"
+      "components/permissions/RolesTable.jsx",
+      "components/help/HelpTopicContent.jsx",
+      "lib/help/help-registry.js"
     ]
   },
   "md56c30d7": {
@@ -39804,7 +39899,8 @@
     "source": "Verified",
     "files": [
       "app/(portal)/admin/users/page.jsx",
-      "lib/i18n/interaction-labels.mjs"
+      "lib/i18n/interaction-labels.mjs",
+      "components/voice-flow/AssistantInviteSettings.jsx"
     ]
   },
   "m187c4780": {
@@ -41097,7 +41193,7 @@
       "app/(portal)/settings/page.jsx"
     ]
   },
-  "m9af8a2fc": {
+  "mbbacd570": {
     "source": "e.g. Acme Air Medical",
     "files": [
       "app/(portal)/settings/page.jsx"
@@ -41608,7 +41704,8 @@
   "m41314139": {
     "source": "Reason",
     "files": [
-      "app/(portal)/supervisor/analytics/page.jsx"
+      "app/(portal)/supervisor/analytics/page.jsx",
+      "components/telephony/StationAdministration.jsx"
     ]
   },
   "m6a061096": {
@@ -43839,7 +43936,9 @@
   "me4db741a": {
     "source": "Time zone",
     "files": [
-      "app/(portal)/supervisor/outbound-dialer/page.jsx"
+      "app/(portal)/supervisor/outbound-dialer/page.jsx",
+      "components/schedules/ScheduleFields.jsx",
+      "config/voice-flow-nodes.js"
     ]
   },
   "m8fd9b7bf": {
@@ -46226,7 +46325,8 @@
   "m5ccc0538": {
     "source": "All objects",
     "files": [
-      "app/(portal)/admin/permissions/page.jsx"
+      "app/(portal)/admin/permissions/page.jsx",
+      "app/(portal)/admin/system/extensions/page.jsx"
     ]
   },
   "ma09129ab": {
@@ -46251,7 +46351,9 @@
     "source": "Phones",
     "files": [
       "app/(portal)/admin/phones-provisioning/page.jsx",
-      "lib/authz/permissions.mjs"
+      "lib/authz/permissions.mjs",
+      "app/(portal)/admin/system/extensions/page.jsx",
+      "components/telephony/ExtensionDirectory.jsx"
     ]
   },
   "m761cd1bf": {
@@ -48839,7 +48941,8 @@
     "files": [
       "components/assistants/AssistantEditor.jsx",
       "components/assistants/AssistantChangeReview.jsx",
-      "components/assistants/AssistantSettingsSearch.jsx"
+      "components/assistants/AssistantSettingsSearch.jsx",
+      "components/telephony/NativeSoftphone.jsx"
     ]
   },
   "m9ecd7754": {
@@ -53485,7 +53588,8 @@
   "m9abf35ed": {
     "source": "Changes saved",
     "files": [
-      "components/whatsapp/WhatsAppAdmin.jsx"
+      "components/whatsapp/WhatsAppAdmin.jsx",
+      "components/telephony/StationAdministration.jsx"
     ]
   },
   "mf06f4e3c": {
@@ -55694,7 +55798,8 @@
     "source": "Headset",
     "files": [
       "config/status-icons.js",
-      "components/widget-admin/IconPicker.jsx"
+      "components/widget-admin/IconPicker.jsx",
+      "components/headsets/HeadsetStatusBadge.jsx"
     ]
   },
   "m53707c4e": {
@@ -55810,7 +55915,8 @@
     "source": "Microphone",
     "files": [
       "config/status-icons.js",
-      "components/widget-admin/IconPicker.jsx"
+      "components/widget-admin/IconPicker.jsx",
+      "components/headsets/HeadsetStatusBadge.jsx"
     ]
   },
   "m1e48a2c8": {
@@ -58269,7 +58375,9 @@
   "m549f8793": {
     "source": "Interaction history",
     "files": [
-      "lib/authz/permissions.mjs"
+      "lib/authz/permissions.mjs",
+      "components/help/HelpTopicContent.jsx",
+      "lib/help/help-registry.js"
     ]
   },
   "mb651bded": {
@@ -58847,7 +58955,8 @@
       "components/contact-center/SupervisionModal.jsx",
       "components/contact-center/TransferModal.jsx",
       "components/softphone-mini.jsx",
-      "components/softphone.jsx"
+      "components/softphone.jsx",
+      "components/telephony/PhoneSurface.jsx"
     ]
   },
   "m156142db": {
@@ -58866,7 +58975,8 @@
     "files": [
       "components/assistants/AssistantEditor.jsx",
       "components/softphone-mini.jsx",
-      "components/softphone.jsx"
+      "components/softphone.jsx",
+      "components/telephony/PhoneSurface.jsx"
     ]
   },
   "m6f660551": {
@@ -60764,7 +60874,8 @@
   "m492e789d": {
     "source": "Region",
     "files": [
-      "components/ai-widget-status.jsx"
+      "components/ai-widget-status.jsx",
+      "components/schedules/ExceptionCalendarEditor.jsx"
     ]
   },
   "m0b334084": {
@@ -70403,7 +70514,10 @@
   "m96c3723a": {
     "source": "Extension",
     "files": [
-      "components/assistants/tools/TransferToolEditor.jsx"
+      "components/assistants/tools/TransferToolEditor.jsx",
+      "app/(portal)/admin/queues/page.jsx",
+      "app/(portal)/admin/phones-provisioning/page.jsx",
+      "components/telephony/ExtensionDirectory.jsx"
     ]
   },
   "m67e3a55a": {
@@ -71035,14 +71149,16 @@
   "m27acf320": {
     "source": "Devices",
     "files": [
-      "app/(portal)/profile/page.jsx"
+      "app/(portal)/profile/page.jsx",
+      "components/headsets/HeadsetStatusBadge.jsx"
     ]
   },
   "m5c4bbc85": {
     "source": "Manage call devices",
     "files": [
       "components/contact-center/VoiceEndpointSelector.jsx",
-      "components/voice-recovery-badge.jsx"
+      "components/voice-recovery-badge.jsx",
+      "components/telephony/StationPhoneMenu.jsx"
     ]
   },
   "m9d99fc47": {
@@ -72580,7 +72696,8 @@
   "mfa0d176a": {
     "source": "This computer",
     "files": [
-      "lib/telephony/handoff-scene.mjs"
+      "lib/telephony/handoff-scene.mjs",
+      "components/headsets/HeadsetStatusBadge.jsx"
     ]
   },
   "m539dc2d6": {
@@ -73416,7 +73533,8 @@
   "mdcb8af75": {
     "source": "Audio only",
     "files": [
-      "components/video/ConferenceAiControls.jsx"
+      "components/video/ConferenceAiControls.jsx",
+      "components/headsets/HeadsetStatusBadge.jsx"
     ]
   },
   "m12dffbd5": {
@@ -73983,6 +74101,2215 @@
     "source": "Available assistants",
     "files": [
       "config/voice-flow-nodes.js"
+    ]
+  },
+  "mc9ead09f": {
+    "source": "USB headset controls",
+    "files": [
+      "components/admin/HeadsetRolloutSettings.jsx",
+      "components/users/EditSheet.jsx"
+    ]
+  },
+  "mb5466580": {
+    "source": "Enable call controls for approved users. Individual access is managed in each user's profile. Changes reach open clients within 15 seconds.",
+    "files": [
+      "components/admin/HeadsetRolloutSettings.jsx"
+    ]
+  },
+  "m097af33e": {
+    "source": "Enable headset controls",
+    "files": [
+      "components/admin/HeadsetRolloutSettings.jsx"
+    ]
+  },
+  "m3a0be283": {
+    "source": "Jabra",
+    "files": [
+      "components/admin/HeadsetRolloutSettings.jsx"
+    ]
+  },
+  "m075ea281": {
+    "source": "EPOS / Sennheiser",
+    "files": [
+      "components/admin/HeadsetRolloutSettings.jsx"
+    ]
+  },
+  "mc11a695f": {
+    "source": "Poly / Plantronics",
+    "files": [
+      "components/admin/HeadsetRolloutSettings.jsx"
+    ]
+  },
+  "m0ee2754b": {
+    "source": "Save headset settings",
+    "files": [
+      "components/admin/HeadsetRolloutSettings.jsx"
+    ]
+  },
+  "m4e3cd6f5": {
+    "source": "Headset settings saved.",
+    "files": [
+      "components/admin/HeadsetRolloutSettings.jsx"
+    ]
+  },
+  "m5f4bc7bb": {
+    "source": "Control synchronization failed",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "md4b84e02": {
+    "source": "Headset selected",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "m8e8dde5f": {
+    "source": "Connecting to headsets",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "mc076943e": {
+    "source": "Controls in another tab",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "m440b5a1d": {
+    "source": "Choose a headset",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "m71fd7735": {
+    "source": "Headset and audio devices",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "mb672193e": {
+    "source": "Headset settings and tests",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "mc042508c": {
+    "source": "Control device",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "mbc118558": {
+    "source": "No call controls",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "m2da72265": {
+    "source": "Selected headset disconnected",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "m8ed1df09": {
+    "source": "unavailable",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "mf7e4964f": {
+    "source": "Finish the call before changing the control device.",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "m22de1e91": {
+    "source": "Connect a USB headset. Open settings to add a device or check its connection.",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "ma1c72516": {
+    "source": "Your calls, connected to your headset.",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "mdcf00c5e": {
+    "source": "Headset settings",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "me9a81397": {
+    "source": "Diagnostics",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "m2283a726": {
+    "source": "Loading headsets",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "m442c994c": {
+    "source": "Available for call control",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "m20946f8c": {
+    "source": "Audio only — connect the local service",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "m1a5add36": {
+    "source": "Call control unavailable",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "m7494be02": {
+    "source": "Connect a USB headset or its USB adapter, then add it below.",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "mac4795dc": {
+    "source": "Finish the call before changing the control device or running a ring test.",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "ma00653a9": {
+    "source": "Disconnect call controls",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "m27287d38": {
+    "source": "Add Jabra",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "m42f2325a": {
+    "source": "Add Poly",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "mc67c3894": {
+    "source": "For EPOS / Sennheiser, start EPOS Connect on this computer. For Jabra and Poly, use desktop Chrome or Edge and allow device access.",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "mac6f86a5": {
+    "source": "Choose the microphone and speaker separately from call controls.",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "m4d8a1dee": {
+    "source": "Allow microphone access and refresh",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "m7dbb8b4f": {
+    "source": "Test headset ring",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "maccd0254": {
+    "source": "Reconnect headset services",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "mc87530e4": {
+    "source": "Control status",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "m753dc8a5": {
+    "source": "Availability is detected from the device. Verify buttons, indicators and two-way audio on each headset and USB adapter before production use.",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "mda9dc496": {
+    "source": "Headset events",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "mbbd0d3af": {
+    "source": "No headset events recorded.",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "mb9fae66b": {
+    "source": "Export diagnostics",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "ma9a52136": {
+    "source": "Loading audio devices",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "mb331d989": {
+    "source": "System default",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "maa82102c": {
+    "source": "Selected device unavailable",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "m7e7b0022": {
+    "source": "Audio device {value0}",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "m6e2fe111": {
+    "source": "Headset control failed",
+    "files": [
+      "components/softphone-mini.jsx"
+    ]
+  },
+  "mf5c34391": {
+    "source": "Mute failed",
+    "files": [
+      "components/softphone-mini.jsx",
+      "components/softphone.jsx"
+    ]
+  },
+  "mafb3571d": {
+    "source": "Hold failed",
+    "files": [
+      "components/softphone-mini.jsx",
+      "components/softphone.jsx"
+    ]
+  },
+  "ma1c5301c": {
+    "source": "Answer failed",
+    "files": [
+      "components/softphone-mini.jsx"
+    ]
+  },
+  "m8bcc5a23": {
+    "source": "Reject failed",
+    "files": [
+      "components/softphone-mini.jsx"
+    ]
+  },
+  "mb5ba04e9": {
+    "source": "Hangup failed",
+    "files": [
+      "components/softphone-mini.jsx"
+    ]
+  },
+  "mb1a425bc": {
+    "source": "Microphone selection failed",
+    "files": [
+      "components/softphone.jsx"
+    ]
+  },
+  "m0c4e8bf5": {
+    "source": "Speaker selection failed",
+    "files": [
+      "components/softphone.jsx"
+    ]
+  },
+  "m709464fe": {
+    "source": "Allow Jabra, EPOS and Poly call controls for this user.",
+    "files": [
+      "components/users/EditSheet.jsx"
+    ]
+  },
+  "mf5601447": {
+    "source": "Ring indication",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "m25187bef": {
+    "source": "Use the manufacturer's USB adapter. Bluetooth alone does not enable call controls.",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "mff635ac7": {
+    "source": "If Jabra is missing, install Jabra Device Connector and its browser extension, then restart the browser.",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "m1f4835e8": {
+    "source": "via {value0}",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "me49a4d8b": {
+    "source": "Paired headset model",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "m5b62ccbc": {
+    "source": "Not specified — show USB adapter",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "m749d33b3": {
+    "source": "EPOS reports the adapter name. Choose the paired model for its name and picture; this does not change call controls or audio routing.",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "mcaaafb6d": {
+    "source": "Internal extension",
+    "files": [
+      "components/telephony/ExtensionAssignment.jsx"
+    ]
+  },
+  "m215802d3": {
+    "source": "One number from the pool assigned to this object category.",
+    "files": [
+      "components/telephony/ExtensionAssignment.jsx"
+    ]
+  },
+  "m9dd71b24": {
+    "source": "Save this object before assigning its extension.",
+    "files": [
+      "components/telephony/ExtensionAssignment.jsx"
+    ]
+  },
+  "m60bf89ee": {
+    "source": "No pool is configured for this object category.",
+    "files": [
+      "components/telephony/ExtensionAssignment.jsx"
+    ]
+  },
+  "mbbae2ef4": {
+    "source": "Search available extensions",
+    "files": [
+      "components/telephony/ExtensionAssignment.jsx"
+    ]
+  },
+  "mba5379bb": {
+    "source": "Find number",
+    "files": [
+      "components/telephony/ExtensionAssignment.jsx"
+    ]
+  },
+  "m29d09375": {
+    "source": "Available extension",
+    "files": [
+      "components/telephony/ExtensionAssignment.jsx"
+    ]
+  },
+  "m6ecdf745": {
+    "source": "Save extension",
+    "files": [
+      "components/telephony/ExtensionAssignment.jsx"
+    ]
+  },
+  "ma0a721aa": {
+    "source": "The identification ring has finished. Confirm that this is your phone.",
+    "files": [
+      "components/telephony/PhoneSelection.jsx",
+      "components/telephony/CompactPhonePicker.jsx"
+    ]
+  },
+  "m8b4f3c70": {
+    "source": "Sign out",
+    "files": [
+      "components/telephony/PhoneSelection.jsx",
+      "components/telephony/CompactPhonePicker.jsx"
+    ]
+  },
+  "m96a90eb4": {
+    "source": "Signed in",
+    "files": [
+      "components/telephony/PhoneSelection.jsx",
+      "components/telephony/StationAdministration.jsx"
+    ]
+  },
+  "m3299719b": {
+    "source": "Choose your phone",
+    "files": [
+      "components/telephony/PhoneSelection.jsx",
+      "components/telephony/PhoneSelectionGate.jsx",
+      "components/telephony/StationPhoneMenu.jsx"
+    ]
+  },
+  "m89274228": {
+    "source": "Where are you working today?",
+    "files": [
+      "components/telephony/PhoneSelection.jsx"
+    ]
+  },
+  "m06b92630": {
+    "source": "Use your browser, a desk phone or a SIP client. Calls will follow the station you choose for this session.",
+    "files": [
+      "components/telephony/PhoneSelection.jsx"
+    ]
+  },
+  "m72ab9a9a": {
+    "source": "Find a phone by name, model or extension",
+    "files": [
+      "components/telephony/PhoneSelection.jsx",
+      "components/telephony/CompactPhonePicker.jsx"
+    ]
+  },
+  "m0910e54e": {
+    "source": "Ext.",
+    "files": [
+      "components/telephony/PhoneSelection.jsx"
+    ]
+  },
+  "m28a47d04": {
+    "source": "Desk phone",
+    "files": [
+      "components/telephony/PhoneSelection.jsx",
+      "components/telephony/StationAdministration.jsx",
+      "components/telephony/StationPhoneMenu.jsx"
+    ]
+  },
+  "m03d181e9": {
+    "source": "Occupied",
+    "files": [
+      "components/telephony/PhoneSelection.jsx",
+      "components/telephony/StationAdministration.jsx",
+      "components/telephony/CompactPhonePicker.jsx"
+    ]
+  },
+  "m0633d0c1": {
+    "source": "Built-in browser softphone",
+    "files": [
+      "components/telephony/PhoneSelection.jsx"
+    ]
+  },
+  "m528fb8c2": {
+    "source": "SIP client",
+    "files": [
+      "components/telephony/PhoneSelection.jsx",
+      "components/telephony/StationAdministration.jsx"
+    ]
+  },
+  "m4fe37743": {
+    "source": "Your current station",
+    "files": [
+      "components/telephony/PhoneSelection.jsx"
+    ]
+  },
+  "m33bac4bf": {
+    "source": "Shared workstation",
+    "files": [
+      "components/telephony/PhoneSelection.jsx",
+      "components/telephony/StationAdministration.jsx",
+      "components/telephony/CompactPhonePicker.jsx"
+    ]
+  },
+  "m660220b9": {
+    "source": "Assigned to you",
+    "files": [
+      "components/telephony/PhoneSelection.jsx",
+      "components/telephony/CompactPhonePicker.jsx"
+    ]
+  },
+  "m946aea09": {
+    "source": "Ringing phone…",
+    "files": [
+      "components/telephony/PhoneSelection.jsx"
+    ]
+  },
+  "m98d969c4": {
+    "source": "Ring to identify",
+    "files": [
+      "components/telephony/PhoneSelection.jsx",
+      "components/telephony/CompactPhonePicker.jsx"
+    ]
+  },
+  "m1200c6ec": {
+    "source": "Use a headset connected to this computer.",
+    "files": [
+      "components/telephony/PhoneSelection.jsx"
+    ]
+  },
+  "m2ccbb6ba": {
+    "source": "No matching phones are available for your account.",
+    "files": [
+      "components/telephony/PhoneSelection.jsx",
+      "components/telephony/CompactPhonePicker.jsx"
+    ]
+  },
+  "m4d674220": {
+    "source": "Start working",
+    "files": [
+      "components/telephony/PhoneSelection.jsx",
+      "components/telephony/CompactPhonePicker.jsx"
+    ]
+  },
+  "m95806fe2": {
+    "source": "Continue without voice",
+    "files": [
+      "components/telephony/PhoneSelection.jsx",
+      "components/telephony/CompactPhonePicker.jsx"
+    ]
+  },
+  "m54ad17b4": {
+    "source": "Voice disabled for this session",
+    "files": [
+      "components/telephony/SessionPhoneBar.jsx",
+      "components/telephony/StationPhoneMenu.jsx"
+    ]
+  },
+  "m36521787": {
+    "source": "Browser phone",
+    "files": [
+      "components/telephony/SessionPhoneBar.jsx"
+    ]
+  },
+  "m1898ec9b": {
+    "source": "Call in progress",
+    "files": [
+      "components/telephony/SessionPhoneBar.jsx",
+      "components/telephony/NativePhoneControls.jsx",
+      "components/telephony/StationPhoneMenu.jsx"
+    ]
+  },
+  "mc2ad822b": {
+    "source": "Phone idle",
+    "files": [
+      "components/telephony/SessionPhoneBar.jsx",
+      "components/telephony/NativePhoneControls.jsx",
+      "components/telephony/StationPhoneMenu.jsx"
+    ]
+  },
+  "m39cb1e15": {
+    "source": "Checking phone…",
+    "files": [
+      "components/telephony/SessionPhoneBar.jsx",
+      "components/telephony/NativePhoneControls.jsx",
+      "components/telephony/NativeSoftphone.jsx"
+    ]
+  },
+  "mee0d92c5": {
+    "source": "Change phone",
+    "files": [
+      "components/telephony/SessionPhoneBar.jsx",
+      "components/telephony/PhoneSwitchDialog.jsx",
+      "components/telephony/StationPhoneMenu.jsx",
+      "components/voice-recovery-badge.jsx"
+    ]
+  },
+  "m1f77db38": {
+    "source": "Answer and control calls using your SIP client. Routing and agent availability are managed here.",
+    "files": [
+      "components/telephony/SessionPhoneBar.jsx",
+      "components/telephony/NativePhoneControls.jsx",
+      "components/telephony/NativeSoftphone.jsx"
+    ]
+  },
+  "m760e475b": {
+    "source": "Manage station ownership and resolve occupied sessions.",
+    "files": [
+      "components/telephony/StationAdministration.jsx"
+    ]
+  },
+  "m82ffc26b": {
+    "source": "Add SIP client",
+    "files": [
+      "components/telephony/StationAdministration.jsx",
+      "app/(portal)/admin/system/extensions/page.jsx"
+    ]
+  },
+  "m60205942": {
+    "source": "Station name",
+    "files": [
+      "components/telephony/StationAdministration.jsx"
+    ]
+  },
+  "mc913a634": {
+    "source": "Assigned user",
+    "files": [
+      "components/telephony/StationAdministration.jsx"
+    ]
+  },
+  "ma140f405": {
+    "source": "No assigned user",
+    "files": [
+      "components/telephony/StationAdministration.jsx"
+    ]
+  },
+  "ma0c08aff": {
+    "source": "Telnyx credential connection ID",
+    "files": [
+      "components/telephony/StationAdministration.jsx"
+    ]
+  },
+  "me662c364": {
+    "source": "Save station",
+    "files": [
+      "components/telephony/StationAdministration.jsx"
+    ]
+  },
+  "m1870c7b6": {
+    "source": "Release station",
+    "files": [
+      "components/telephony/StationAdministration.jsx"
+    ]
+  },
+  "m675ea540": {
+    "source": "Active calls and wrap-up cannot be interrupted. The release is recorded in the audit log.",
+    "files": [
+      "components/telephony/StationAdministration.jsx"
+    ]
+  },
+  "m2edd0e9e": {
+    "source": "Release session",
+    "files": [
+      "components/telephony/StationAdministration.jsx"
+    ]
+  },
+  "m87dc558e": {
+    "source": "No stations yet. Sync the phone catalog or add a SIP client.",
+    "files": [
+      "components/telephony/StationAdministration.jsx"
+    ]
+  },
+  "mebccd57a": {
+    "source": "Extensions & stations",
+    "files": [
+      "app/(portal)/admin/system/extensions/page.jsx",
+      "components/admin/SystemSectionNav.jsx",
+      "lib/authz/permissions.mjs"
+    ]
+  },
+  "ma6a52255": {
+    "source": "Separate number pools for phones, users and queues. One shared directory.",
+    "files": [
+      "app/(portal)/admin/system/extensions/page.jsx"
+    ]
+  },
+  "me35728f9": {
+    "source": "Sync phone catalog",
+    "files": [
+      "app/(portal)/admin/system/extensions/page.jsx"
+    ]
+  },
+  "mcdc6a322": {
+    "source": "Add pool",
+    "files": [
+      "app/(portal)/admin/system/extensions/page.jsx"
+    ]
+  },
+  "mf02eaa84": {
+    "source": "No pool configured",
+    "files": [
+      "app/(portal)/admin/system/extensions/page.jsx",
+      "components/telephony/ExtensionDirectory.jsx"
+    ]
+  },
+  "m4ae004bd": {
+    "source": "assigned",
+    "files": [
+      "app/(portal)/admin/system/extensions/page.jsx"
+    ]
+  },
+  "mb78266b2": {
+    "source": "Create a range for this category.",
+    "files": [
+      "app/(portal)/admin/system/extensions/page.jsx"
+    ]
+  },
+  "ma337aadf": {
+    "source": "Delete empty pool",
+    "files": [
+      "app/(portal)/admin/system/extensions/page.jsx",
+      "components/telephony/ExtensionDirectory.jsx"
+    ]
+  },
+  "m0ec905d2": {
+    "source": "Pool name",
+    "files": [
+      "app/(portal)/admin/system/extensions/page.jsx",
+      "components/telephony/ExtensionDirectory.jsx"
+    ]
+  },
+  "mc7a34946": {
+    "source": "Object category",
+    "files": [
+      "app/(portal)/admin/system/extensions/page.jsx",
+      "components/telephony/ExtensionDirectory.jsx"
+    ]
+  },
+  "mbae48734": {
+    "source": "First extension",
+    "files": [
+      "app/(portal)/admin/system/extensions/page.jsx",
+      "components/telephony/ExtensionDirectory.jsx"
+    ]
+  },
+  "m5196523c": {
+    "source": "Last extension",
+    "files": [
+      "app/(portal)/admin/system/extensions/page.jsx",
+      "components/telephony/ExtensionDirectory.jsx"
+    ]
+  },
+  "m9d0b13e6": {
+    "source": "Save pool",
+    "files": [
+      "app/(portal)/admin/system/extensions/page.jsx",
+      "components/telephony/ExtensionDirectory.jsx"
+    ]
+  },
+  "m68b1c737": {
+    "source": "Search name, model or extension",
+    "files": [
+      "app/(portal)/admin/system/extensions/page.jsx"
+    ]
+  },
+  "m4afb43cf": {
+    "source": "No matching objects. Sync the phone catalog to include provisioned phones and WebRTC phones.",
+    "files": [
+      "app/(portal)/admin/system/extensions/page.jsx",
+      "components/telephony/ExtensionDirectory.jsx"
+    ]
+  },
+  "meb66f75e": {
+    "source": "Select a user, queue or phone to assign an available extension.",
+    "files": [
+      "app/(portal)/admin/system/extensions/page.jsx"
+    ]
+  },
+  "m3645be9e": {
+    "source": "Number assignments",
+    "files": [
+      "app/(portal)/admin/system/extensions/page.jsx"
+    ]
+  },
+  "m9106b33f": {
+    "source": "Phones & occupancy",
+    "files": [
+      "app/(portal)/admin/system/extensions/page.jsx"
+    ]
+  },
+  "mc5e1d139": {
+    "source": "Allocate internal numbers and manage phone station assignments.",
+    "files": [
+      "app/(portal)/admin/system/extensions/page.jsx",
+      "components/admin/SystemSectionNav.jsx"
+    ]
+  },
+  "mccfaba73": {
+    "source": "Extensions and stations",
+    "files": [
+      "app/(portal)/admin/system/extensions/page.jsx",
+      "lib/authz/permissions.mjs"
+    ]
+  },
+  "m806a4e95": {
+    "source": "Extension directory",
+    "files": [
+      "app/(portal)/admin/system/extensions/page.jsx"
+    ]
+  },
+  "m63187a57": {
+    "source": "Number pools",
+    "files": [
+      "app/(portal)/admin/system/extensions/page.jsx"
+    ]
+  },
+  "m706100b9": {
+    "source": "{value0} shown",
+    "files": [
+      "app/(portal)/admin/system/extensions/page.jsx",
+      "app/(portal)/admin/phones-provisioning/page.jsx"
+    ]
+  },
+  "m84e12ead": {
+    "source": "Extensions configuration",
+    "files": [
+      "app/(portal)/admin/system/extensions/page.jsx"
+    ]
+  },
+  "m307ed749": {
+    "source": "Select a range or an object to edit its configuration.",
+    "files": [
+      "app/(portal)/admin/system/extensions/page.jsx"
+    ]
+  },
+  "m2d562de3": {
+    "source": "Reload the directory to configure a number pool.",
+    "files": [
+      "app/(portal)/admin/system/extensions/page.jsx"
+    ]
+  },
+  "md27a5202": {
+    "source": "Defined objects",
+    "files": [
+      "components/telephony/ExtensionDirectory.jsx"
+    ]
+  },
+  "mc74f8fef": {
+    "source": "Assigned numbers",
+    "files": [
+      "components/telephony/ExtensionDirectory.jsx"
+    ]
+  },
+  "macb28ce0": {
+    "source": "{value0} available · {value1} digits",
+    "files": [
+      "components/telephony/ExtensionDirectory.jsx"
+    ]
+  },
+  "mb190ff9e": {
+    "source": "Configure range",
+    "files": [
+      "components/telephony/ExtensionDirectory.jsx"
+    ]
+  },
+  "m47448aac": {
+    "source": "Edit number pool",
+    "files": [
+      "components/telephony/ExtensionDirectory.jsx"
+    ]
+  },
+  "md5f3b220": {
+    "source": "Create number pool",
+    "files": [
+      "components/telephony/ExtensionDirectory.jsx"
+    ]
+  },
+  "m3d92ae3c": {
+    "source": "One separate range for each object category.",
+    "files": [
+      "components/telephony/ExtensionDirectory.jsx"
+    ]
+  },
+  "m8f58c869": {
+    "source": "Reassign allocated numbers before deleting this pool.",
+    "files": [
+      "components/telephony/ExtensionDirectory.jsx"
+    ]
+  },
+  "m57f62ddb": {
+    "source": "Loading objects",
+    "files": [
+      "components/telephony/ExtensionDirectory.jsx"
+    ]
+  },
+  "m13786d1e": {
+    "source": "Object / model",
+    "files": [
+      "components/telephony/ExtensionDirectory.jsx"
+    ]
+  },
+  "m1ecb2f30": {
+    "source": "Loading stations",
+    "files": [
+      "components/telephony/StationAdministration.jsx",
+      "components/telephony/CompactPhonePicker.jsx"
+    ]
+  },
+  "m7c4a2a10": {
+    "source": "No matching stations.",
+    "files": [
+      "components/telephony/StationAdministration.jsx"
+    ]
+  },
+  "m75d84488": {
+    "source": "Release this station before editing its assignment",
+    "files": [
+      "components/telephony/StationAdministration.jsx"
+    ]
+  },
+  "mfcc40f62": {
+    "source": "Model / client",
+    "files": [
+      "app/(portal)/admin/system/extensions/page.jsx"
+    ]
+  },
+  "m751d94ab": {
+    "source": "Finish the current call before changing phones.",
+    "files": [
+      "components/telephony/CompactPhonePicker.jsx"
+    ]
+  },
+  "m0bed931e": {
+    "source": "Current phone",
+    "files": [
+      "components/telephony/CompactPhonePicker.jsx",
+      "components/telephony/StationPhoneMenu.jsx"
+    ]
+  },
+  "mf0b4c1e4": {
+    "source": "Use this phone",
+    "files": [
+      "components/telephony/CompactPhonePicker.jsx"
+    ]
+  },
+  "m737f7b9d": {
+    "source": "Choose the phone you want to use for this session.",
+    "files": [
+      "components/telephony/PhoneSwitchDialog.jsx",
+      "components/telephony/PhoneSelection.jsx"
+    ]
+  },
+  "m44bf8d24": {
+    "source": "Choose a phone to enable voice for this session.",
+    "files": [
+      "components/telephony/StationPhoneMenu.jsx"
+    ]
+  },
+  "mdae9bb6e": {
+    "source": "Wait for the phone connection to finish.",
+    "files": [
+      "components/telephony-provider.jsx",
+      "components/telephony/PhoneSwitchDialog.jsx"
+    ]
+  },
+  "m83fcc912": {
+    "source": "Phone selection failed",
+    "files": [
+      "components/telephony-provider.jsx"
+    ]
+  },
+  "mc16ed040": {
+    "source": "Search name, model, MAC or extension",
+    "files": [
+      "app/(portal)/admin/phones-provisioning/page.jsx"
+    ]
+  },
+  "m3ac672de": {
+    "source": "Search phones",
+    "files": [
+      "app/(portal)/admin/phones-provisioning/page.jsx"
+    ]
+  },
+  "ma7b98066": {
+    "source": "No matching phones",
+    "files": [
+      "app/(portal)/admin/phones-provisioning/page.jsx"
+    ]
+  },
+  "m793b94a3": {
+    "source": "Try another name, model or number.",
+    "files": [
+      "app/(portal)/admin/phones-provisioning/page.jsx"
+    ]
+  },
+  "m54138ab8": {
+    "source": "Audio is handled by your selected phone.",
+    "files": [
+      "components/telephony/NativeSoftphone.jsx",
+      "components/telephony/StationPhoneMenu.jsx"
+    ]
+  },
+  "m2748ecb8": {
+    "source": "Start outgoing calls on your phone. Calling from the desktop is not available for this station yet.",
+    "files": [
+      "components/telephony/NativeSoftphone.jsx"
+    ]
+  },
+  "mcb217f5f": {
+    "source": "Call status is unavailable for this phone. Use the handset controls.",
+    "files": [
+      "components/telephony/NativeSoftphone.jsx"
+    ]
+  },
+  "m0199e5a8": {
+    "source": "Select and control the call on your phone.",
+    "files": [
+      "components/telephony/NativeSoftphone.jsx"
+    ]
+  },
+  "mb7b91d2a": {
+    "source": "Use the handset controls",
+    "files": [
+      "components/telephony/NativeSoftphone.jsx",
+      "components/telephony/StationPhoneMenu.jsx"
+    ]
+  },
+  "m2ac86b13": {
+    "source": "Call status unavailable",
+    "files": [
+      "components/telephony/NativeSoftphone.jsx",
+      "components/telephony/StationPhoneMenu.jsx"
+    ]
+  },
+  "mfa4878d1": {
+    "source": "The selected phone has changed.",
+    "files": [
+      "components/telephony/NativeSoftphone.jsx"
+    ]
+  },
+  "m8c8f2976": {
+    "source": "This phone action is unavailable for the current call.",
+    "files": [
+      "components/telephony/NativeSoftphone.jsx"
+    ]
+  },
+  "m4aff5eac": {
+    "source": "The assigned extension appears on the phone display. This label is used when no extension is assigned.",
+    "files": [
+      "app/(portal)/admin/phones-provisioning/page.jsx"
+    ]
+  },
+  "m98f59449": {
+    "source": "Outbound caller ID (DID)",
+    "files": [
+      "components/queues/OutboundNumberSelect.jsx"
+    ]
+  },
+  "m26b9bfbb": {
+    "source": "Current number",
+    "files": [
+      "components/queues/OutboundNumberSelect.jsx"
+    ]
+  },
+  "m68a36793": {
+    "source": "No outbound number",
+    "files": [
+      "components/queues/OutboundNumberSelect.jsx"
+    ]
+  },
+  "m3d19f141": {
+    "source": "Search Telnyx numbers",
+    "files": [
+      "components/queues/OutboundNumberSelect.jsx"
+    ]
+  },
+  "m86bee535": {
+    "source": "Agents can use this number when calling on behalf of the queue. Inbound call routing is configured in Call & App Flows.",
+    "files": [
+      "components/queues/OutboundNumberSelect.jsx"
+    ]
+  },
+  "m447b941e": {
+    "source": "Extension · {extension}",
+    "files": [
+      "components/contact-center/NumberSelectionModal.jsx",
+      "components/contact-center/TransferModal.jsx"
+    ]
+  },
+  "m9f3ff0e7": {
+    "source": "Call on behalf of",
+    "files": [
+      "components/contact-center/NumberSelectionModal.jsx"
+    ]
+  },
+  "mb41c7514": {
+    "source": "My number",
+    "files": [
+      "components/contact-center/NumberSelectionModal.jsx"
+    ]
+  },
+  "m69228db5": {
+    "source": "Internal calls use your personal identity. External queue calls are reported against the selected queue.",
+    "files": [
+      "components/contact-center/NumberSelectionModal.jsx"
+    ]
+  },
+  "meb2c097f": {
+    "source": "Extension, +1234567890 or sip:user@domain.com",
+    "files": [
+      "components/contact-center/NumberSelectionModal.jsx"
+    ]
+  },
+  "m8fb5542b": {
+    "source": "Answer your selected phone to connect the call.",
+    "files": [
+      "components/telephony/NativeSoftphone.jsx"
+    ]
+  },
+  "m7171c131": {
+    "source": "Could not start call",
+    "files": [
+      "components/telephony/NativeSoftphone.jsx"
+    ]
+  },
+  "ma322d1ae": {
+    "source": "Select a number to call. Your phone will ring first; answer it to connect.",
+    "files": [
+      "components/telephony/NativeSoftphone.jsx"
+    ]
+  },
+  "m2ce91a5b": {
+    "source": "Caller ID",
+    "files": [
+      "app/(portal)/admin/queues/page.jsx"
+    ]
+  },
+  "mae8d5fb6": {
+    "source": "Defaults to the assigned extension. Enter a custom name to show it on the phone display instead; clear it to restore the extension.",
+    "files": [
+      "app/(portal)/admin/phones-provisioning/page.jsx"
+    ]
+  },
+  "me6c867d1": {
+    "source": "Used for calls from this phone when no user is signed in. Signed-in users choose their own caller ID. Without a phone DID, the system Main From Number is used.",
+    "files": [
+      "app/(portal)/admin/phones-provisioning/page.jsx"
+    ]
+  },
+  "md96a86d4": {
+    "source": "Could not save calling identity.",
+    "files": [
+      "components/contact-center/NumberSelectionModal.jsx"
+    ]
+  },
+  "mca83de47": {
+    "source": "Settings saved. The display label will update when the phone next provisions.",
+    "files": [
+      "app/(portal)/admin/phones-provisioning/page.jsx"
+    ]
+  },
+  "mc120c84d": {
+    "source": "Schedules",
+    "files": [
+      "app/(portal)/admin/call-flows/[id]/page.jsx",
+      "config/voice-flow-nodes.js"
+    ]
+  },
+  "m92577641": {
+    "source": "Route by working hours and shared exception calendars",
+    "files": [
+      "app/(portal)/admin/call-flows/[id]/page.jsx",
+      "config/voice-flow-nodes.js"
+    ]
+  },
+  "m83c15da7": {
+    "source": "New calls will use the published revision.",
+    "files": [
+      "app/(portal)/admin/system/schedules/page.jsx"
+    ]
+  },
+  "mda6d5910": {
+    "source": "Schedules & calendars",
+    "files": [
+      "components/admin/SystemSectionNav.jsx",
+      "components/help/HelpTopicContent.jsx",
+      "lib/authz/permissions.mjs",
+      "lib/help/help-registry.js"
+    ]
+  },
+  "mf090dadd": {
+    "source": "Manage shared working hours, holidays, and date exceptions.",
+    "files": [
+      "components/admin/SystemSectionNav.jsx"
+    ]
+  },
+  "mbaed0fc2": {
+    "source": "Agent Dashboard",
+    "files": [
+      "components/help/HelpTopicContent.jsx",
+      "lib/help/help-registry.js"
+    ]
+  },
+  "m133135b1": {
+    "source": "Profile and preferences",
+    "files": [
+      "components/help/HelpTopicContent.jsx",
+      "lib/help/help-registry.js"
+    ]
+  },
+  "m7119d451": {
+    "source": "Devices and call handoff",
+    "files": [
+      "components/help/HelpTopicContent.jsx",
+      "lib/help/help-registry.js"
+    ]
+  },
+  "mbda33f50": {
+    "source": "Video calls and Vision",
+    "files": [
+      "components/help/HelpTopicContent.jsx",
+      "lib/help/help-registry.js"
+    ]
+  },
+  "mc0758f0f": {
+    "source": "Invite an AI assistant",
+    "files": [
+      "components/help/HelpTopicContent.jsx",
+      "lib/help/help-registry.js"
+    ]
+  },
+  "m86116b3c": {
+    "source": "Workflow test module",
+    "files": [
+      "components/help/HelpTopicContent.jsx",
+      "lib/help/help-registry.js"
+    ]
+  },
+  "m23ee9f5a": {
+    "source": "Workflow MCP bindings",
+    "files": [
+      "components/help/HelpTopicContent.jsx",
+      "lib/help/help-registry.js"
+    ]
+  },
+  "m2ecfebd7": {
+    "source": "Schedules node",
+    "files": [
+      "components/help/HelpTopicContent.jsx",
+      "lib/help/help-registry.js"
+    ]
+  },
+  "m9d3942f7": {
+    "source": "Assistant invitations",
+    "files": [
+      "components/help/HelpTopicContent.jsx",
+      "lib/help/help-registry.js"
+    ]
+  },
+  "m3c9de9e3": {
+    "source": "Open Dashboard, Settings, Schedules & calendars, AI Copilot and operational tools.",
+    "files": [
+      "components/help/HelpTopicContent.jsx",
+      "lib/help/help-registry.js"
+    ]
+  },
+  "mee2b31eb": {
+    "source": "Configure and publish chat, images, voice, avatars, video, Vision and co-browsing.",
+    "files": [
+      "components/help/HelpTopicContent.jsx",
+      "lib/help/help-registry.js"
+    ]
+  },
+  "mb413edb0": {
+    "source": "Review your workload, handling time, queues and disposition metrics.",
+    "files": [
+      "components/help/HelpTopicContent.jsx",
+      "lib/help/help-registry.js"
+    ]
+  },
+  "mdb94b723": {
+    "source": "Manage personal details, interface and speech language, notification sounds, security and devices.",
+    "files": [
+      "components/help/HelpTopicContent.jsx",
+      "lib/help/help-registry.js"
+    ]
+  },
+  "m9f2e55b1": {
+    "source": "Review call-device availability, connect a companion app or forget a retired phone.",
+    "files": [
+      "components/help/HelpTopicContent.jsx",
+      "lib/help/help-registry.js"
+    ]
+  },
+  "mcb83fdf2": {
+    "source": "Choose where future calls ring or move supported active work to another device.",
+    "files": [
+      "components/help/HelpTopicContent.jsx",
+      "lib/help/help-registry.js"
+    ]
+  },
+  "mbaaf80d2": {
+    "source": "Handle video, screen sharing, AI participants and separately authorized Vision sources.",
+    "files": [
+      "components/help/HelpTopicContent.jsx",
+      "lib/help/help-registry.js"
+    ]
+  },
+  "mf0a8ce21": {
+    "source": "Request page viewing and separately approved control of eligible page elements.",
+    "files": [
+      "components/help/HelpTopicContent.jsx",
+      "lib/help/help-registry.js"
+    ]
+  },
+  "m9489aa7d": {
+    "source": "Add an allowed AI participant to a live voice conversation and inspect its separate transcript.",
+    "files": [
+      "components/help/HelpTopicContent.jsx",
+      "lib/help/help-registry.js"
+    ]
+  },
+  "ma74d7107": {
+    "source": "Manage team membership, leadership and team-scoped access.",
+    "files": [
+      "components/help/HelpTopicContent.jsx",
+      "lib/help/help-registry.js"
+    ]
+  },
+  "m558bf652": {
+    "source": "Create and assign roles from screen, operation and scope permissions.",
+    "files": [
+      "components/help/HelpTopicContent.jsx",
+      "lib/help/help-registry.js"
+    ]
+  },
+  "m5c9ed5d7": {
+    "source": "Inspect voice, messaging and video timelines, recordings, transcripts and workflow evidence.",
+    "files": [
+      "components/help/HelpTopicContent.jsx",
+      "lib/help/help-registry.js"
+    ]
+  },
+  "mb10d7491": {
+    "source": "Review platform configuration inventory, integrations and activity.",
+    "files": [
+      "components/help/HelpTopicContent.jsx",
+      "lib/help/help-registry.js"
+    ]
+  },
+  "m8a59b841": {
+    "source": "Configure shared SLA targets, hold experiences, notification sounds and agent lifecycle.",
+    "files": [
+      "components/help/HelpTopicContent.jsx",
+      "lib/help/help-registry.js"
+    ]
+  },
+  "m99059633": {
+    "source": "Publish working hours and ordered exception calendars for Call Flow routing.",
+    "files": [
+      "components/help/HelpTopicContent.jsx",
+      "lib/help/help-registry.js"
+    ]
+  },
+  "maae3b9fe": {
+    "source": "Configure the platform default model, operation overrides, business guidance and draft tests.",
+    "files": [
+      "components/help/HelpTopicContent.jsx",
+      "lib/help/help-registry.js"
+    ]
+  },
+  "mc55fa7a6": {
+    "source": "Test analysis and simulated callers with separate model choices in chat or voice.",
+    "files": [
+      "components/help/HelpTopicContent.jsx",
+      "lib/help/help-registry.js"
+    ]
+  },
+  "m1d19a831": {
+    "source": "Map lookup inputs, derived slots, alternatives and deliberate submission actions.",
+    "files": [
+      "components/help/HelpTopicContent.jsx",
+      "lib/help/help-registry.js"
+    ]
+  },
+  "mc9987c02": {
+    "source": "Manage reusable pronunciation entries for compatible assistant voices.",
+    "files": [
+      "components/help/HelpTopicContent.jsx",
+      "lib/help/help-registry.js"
+    ]
+  },
+  "m618586be": {
+    "source": "Branch on published opening hours and exception calendars.",
+    "files": [
+      "components/help/HelpTopicContent.jsx",
+      "lib/help/help-registry.js"
+    ]
+  },
+  "m1dd5a4ed": {
+    "source": "Select allowed assistants and prepare live conversation events when saving the flow.",
+    "files": [
+      "components/help/HelpTopicContent.jsx",
+      "lib/help/help-registry.js"
+    ]
+  },
+  "mf367b139": {
+    "source": "Coverage from",
+    "files": [
+      "components/schedules/ExceptionCalendarEditor.jsx"
+    ]
+  },
+  "me64bc7ae": {
+    "source": "Coverage through",
+    "files": [
+      "components/schedules/ExceptionCalendarEditor.jsx"
+    ]
+  },
+  "mc8000d8a": {
+    "source": "National holidays only",
+    "files": [
+      "components/schedules/ExceptionCalendarEditor.jsx"
+    ]
+  },
+  "m0b46eb2b": {
+    "source": "From date",
+    "files": [
+      "components/schedules/ExceptionCalendarEditor.jsx"
+    ]
+  },
+  "me1e7e71a": {
+    "source": "Through date",
+    "files": [
+      "components/schedules/ExceptionCalendarEditor.jsx"
+    ]
+  },
+  "mc94d4eac": {
+    "source": "Closed all day",
+    "files": [
+      "components/schedules/ExceptionCalendarEditor.jsx"
+    ]
+  },
+  "m46ee18c6": {
+    "source": "Open 24 hours",
+    "files": [
+      "components/schedules/ExceptionCalendarEditor.jsx"
+    ]
+  },
+  "mf8847fb1": {
+    "source": "Custom hours",
+    "files": [
+      "components/schedules/ExceptionCalendarEditor.jsx"
+    ]
+  },
+  "m06626d4a": {
+    "source": "Repeat",
+    "files": [
+      "components/schedules/ExceptionCalendarEditor.jsx"
+    ]
+  },
+  "m9996b85c": {
+    "source": "One time",
+    "files": [
+      "components/schedules/ExceptionCalendarEditor.jsx"
+    ]
+  },
+  "m8bf32250": {
+    "source": "Every year on these dates",
+    "files": [
+      "components/schedules/ExceptionCalendarEditor.jsx"
+    ]
+  },
+  "mcbc0ef5b": {
+    "source": "Test date",
+    "files": [
+      "components/schedules/ScheduleFields.jsx"
+    ]
+  },
+  "maba19491": {
+    "source": "Repeated time during clock change",
+    "files": [
+      "components/schedules/ScheduleFields.jsx"
+    ]
+  },
+  "m04a66ca5": {
+    "source": "Ask if this time occurs twice",
+    "files": [
+      "components/schedules/ScheduleFields.jsx"
+    ]
+  },
+  "me1e73a9c": {
+    "source": "Earlier occurrence",
+    "files": [
+      "components/schedules/ScheduleFields.jsx"
+    ]
+  },
+  "mfce0d532": {
+    "source": "Later occurrence",
+    "files": [
+      "components/schedules/ScheduleFields.jsx"
+    ]
+  },
+  "mf6043b37": {
+    "source": "Request failed",
+    "files": [
+      "components/telephony/ExtensionAssignment.jsx"
+    ]
+  },
+  "m17e62583": {
+    "source": "Phone control failed",
+    "files": [
+      "components/telephony/NativePhoneSession.jsx"
+    ]
+  },
+  "m133ee30d": {
+    "source": "Conversation WebSocket conflict",
+    "files": [
+      "components/voice-flow/AssistantEventDestinationConfirmation.jsx"
+    ]
+  },
+  "mde5a4d8b": {
+    "source": "Replace Conversation WebSocket destinations?",
+    "files": [
+      "components/voice-flow/AssistantEventDestinationConfirmation.jsx"
+    ]
+  },
+  "m9840347d": {
+    "source": "These assistants already send conversation events to another destination. Overwriting redirects future events to this Contact Center instance and may interrupt live transcription or delegation in the other environment. This setting is shared by all call flows using each assistant.",
+    "files": [
+      "components/voice-flow/AssistantEventDestinationConfirmation.jsx"
+    ]
+  },
+  "mea0ec7be": {
+    "source": "Conflicting assistants",
+    "files": [
+      "components/voice-flow/AssistantEventDestinationConfirmation.jsx"
+    ]
+  },
+  "m93825d52": {
+    "source": "Current destination",
+    "files": [
+      "components/voice-flow/AssistantEventDestinationConfirmation.jsx"
+    ]
+  },
+  "m7174e479": {
+    "source": "New destination",
+    "files": [
+      "components/voice-flow/AssistantEventDestinationConfirmation.jsx"
+    ]
+  },
+  "m0dfe68a6": {
+    "source": "Call flows on this instance can share an assistant without changing its destination. Use separate assistants if Dev and Prod need live events at the same time.",
+    "files": [
+      "components/voice-flow/AssistantEventDestinationConfirmation.jsx"
+    ]
+  },
+  "m7d47d370": {
+    "source": "Overwrite and save",
+    "files": [
+      "components/voice-flow/AssistantEventDestinationConfirmation.jsx"
+    ]
+  },
+  "mcbbc7c45": {
+    "source": "Saving this call flow prepares the selected assistants for live transcription in this environment.",
+    "files": [
+      "components/voice-flow/AssistantInviteSettings.jsx"
+    ]
+  },
+  "me3c33c98": {
+    "source": "Working hours source",
+    "files": [
+      "components/voice-flow/ScheduleNodeEditor.jsx",
+      "config/voice-flow-nodes.js"
+    ]
+  },
+  "m4dd9aa12": {
+    "source": "Custom hours for this node",
+    "files": [
+      "components/voice-flow/ScheduleNodeEditor.jsx"
+    ]
+  },
+  "m53a76d01": {
+    "source": "Shared schedule",
+    "files": [
+      "components/voice-flow/ScheduleNodeEditor.jsx",
+      "config/voice-flow-nodes.js"
+    ]
+  },
+  "m7567a845": {
+    "source": "Add exception calendar",
+    "files": [
+      "components/voice-flow/ScheduleNodeEditor.jsx"
+    ]
+  },
+  "med63a0b0": {
+    "source": "Time to evaluate",
+    "files": [
+      "components/voice-flow/ScheduleNodeEditor.jsx",
+      "config/voice-flow-nodes.js"
+    ]
+  },
+  "mf7eda889": {
+    "source": "When this node is reached",
+    "files": [
+      "components/voice-flow/ScheduleNodeEditor.jsx"
+    ]
+  },
+  "m30d791ee": {
+    "source": "When the call was received",
+    "files": [
+      "components/voice-flow/ScheduleNodeEditor.jsx"
+    ]
+  },
+  "m7bef6125": {
+    "source": "If evaluation fails",
+    "files": [
+      "components/voice-flow/ScheduleNodeEditor.jsx",
+      "config/voice-flow-nodes.js"
+    ]
+  },
+  "m3440179b": {
+    "source": "Take FALSE and record error",
+    "files": [
+      "components/voice-flow/ScheduleNodeEditor.jsx"
+    ]
+  },
+  "mfe54ae96": {
+    "source": "Take TRUE and record error",
+    "files": [
+      "components/voice-flow/ScheduleNodeEditor.jsx"
+    ]
+  },
+  "mcae3004e": {
+    "source": "Short factual search query in English; exclude customer identifiers, personal data, secrets, and full conversation transcripts.",
+    "files": [
+      "config/agent-assist-examples.mjs"
+    ]
+  },
+  "m5aa659a9": {
+    "source": "Read the current Telnyx model catalog. Call this before including any explicit LLM model identifier in code or making model availability claims. Use exact returned IDs; documentation examples may contain obsolete or illustrative model names. Only call after Leo is directly addressed.",
+    "files": [
+      "config/agent-assist-examples.mjs"
+    ]
+  },
+  "m2cdab671": {
+    "source": "Weekly hours",
+    "files": [
+      "config/voice-flow-nodes.js"
+    ]
+  },
+  "mdbcac782": {
+    "source": "Use exception calendars",
+    "files": [
+      "config/voice-flow-nodes.js"
+    ]
+  },
+  "m714f9355": {
+    "source": "Exception calendars",
+    "files": [
+      "config/voice-flow-nodes.js"
+    ]
+  },
+  "m5f365c44": {
+    "source": "Result variable",
+    "files": [
+      "config/voice-flow-nodes.js"
+    ]
+  },
+  "m30e8357f": {
+    "source": "Schedules and calendars",
+    "files": [
+      "lib/authz/permissions.mjs"
+    ]
+  },
+  "me5825e2a": {
+    "source": "Configure providers, model fallback, voice/STT, Avatar and integrations in the editor. Use Search settings and Review changes, then check independent save verification before testing the actual channel.",
+    "files": [
+      "lib/help/help-registry.js"
+    ]
+  },
+  "m857807f8": {
+    "source": "Enable the relevant channels for queues and agents, publish the widget, and start a fresh test session. Video Vision, AI chat images and co-browsing have separate controls and consent requirements.",
+    "files": [
+      "lib/help/help-registry.js"
+    ]
+  },
+  "m1a98206d": {
+    "source": "Match dates and filters before comparing metrics. The home destination depends on the screens granted to your account.",
+    "files": [
+      "lib/help/help-registry.js"
+    ]
+  },
+  "m21f02aee": {
+    "source": "Interface language and speech language are separate. Save notifications separately from profile details.",
+    "files": [
+      "lib/help/help-registry.js"
+    ]
+  },
+  "mcaa72ccd": {
+    "source": "Computer represents your browser connections and cannot be forgotten. Resolve active work before forgetting a handset; Forget signs it out and disables future calls and notifications.",
+    "files": [
+      "lib/help/help-registry.js"
+    ]
+  },
+  "m05e9fd7a": {
+    "source": "Calls on selects the destination for future calls. Use the move dialog or Take over here for an active call, and wait for the confirmed outcome.",
+    "files": [
+      "lib/help/help-registry.js"
+    ]
+  },
+  "m6befeabb": {
+    "source": "Only the handling device controls media and wrap-up. Browser camera permission does not grant AI access; each participant controls consent for their own source.",
+    "files": [
+      "lib/help/help-registry.js"
+    ]
+  },
+  "m42739db7": {
+    "source": "A pairing code does not grant consent. Control needs visitor approval and the control permission. Sensitive fields remain blocked; co-browsing is not recorded.",
+    "files": [
+      "lib/help/help-registry.js"
+    ]
+  },
+  "m78ef3c44": {
+    "source": "The flow must allow invitations and the assistant must have Skip Turn. Removing AI leaves the customer–agent conversation active.",
+    "files": [
+      "lib/help/help-registry.js"
+    ]
+  },
+  "m427f6033": {
+    "source": "Team membership and queue assignments serve different purposes. Review scope permissions before changing a team.",
+    "files": [
+      "lib/help/help-registry.js"
+    ]
+  },
+  "m5be703bb": {
+    "source": "Permissions add across roles. Review scope and the audit trail; a role name alone does not grant access.",
+    "files": [
+      "lib/help/help-registry.js"
+    ]
+  },
+  "m78ca14aa": {
+    "source": "Filter by date, channel and queue. A missing recording may still be processing or may have been disabled; an accepted message is not proof of delivery.",
+    "files": [
+      "lib/help/help-registry.js"
+    ]
+  },
+  "meca0f879": {
+    "source": "Use a controlled channel test to verify actual service behavior; inventory and connectivity indicators do not establish end-to-end success.",
+    "files": [
+      "lib/help/help-registry.js"
+    ]
+  },
+  "m1faa0043": {
+    "source": "Save SLA separately from other settings. Personal notification overrides remain in Profile.",
+    "files": [
+      "lib/help/help-registry.js"
+    ]
+  },
+  "m6b84a461": {
+    "source": "Save draft does not change live routing. Publish reviewed resources, check coverage and time zones, then test the Schedules node.",
+    "files": [
+      "lib/help/help-registry.js"
+    ]
+  },
+  "mc346a6de": {
+    "source": "An empty model inherits. Apply to all clears operation/channel model overrides but preserves explicit workflow and scorecard choices. Test drafts before saving.",
+    "files": [
+      "lib/help/help-registry.js"
+    ]
+  },
+  "m7880dcc5": {
+    "source": "A model choice here applies to one run. Voice uses an authenticated session; check recognized speech, final slots and errors rather than treating a reply as acceptance.",
+    "files": [
+      "lib/help/help-registry.js"
+    ]
+  },
+  "m76d3b942": {
+    "source": "Use input-change behavior for lookups and manual confirmation for transport creation. An uncertain outcome after dispatch must be reconciled before resubmission; manual slot edits remain protected.",
+    "files": [
+      "lib/help/help-registry.js"
+    ]
+  },
+  "mbd0adca4": {
+    "source": "Assign the dictionary to the intended voice configuration and test representative names and terms.",
+    "files": [
+      "lib/help/help-registry.js"
+    ]
+  },
+  "m14f2ef1f": {
+    "source": "Connect True and False. Missing coverage is an error; select its fallback branch and test boundaries before saving.",
+    "files": [
+      "lib/help/help-registry.js"
+    ]
+  },
+  "mcca806ac": {
+    "source": "Verify Skip Turn. Replacing another Conversation WebSocket destination affects every flow using that assistant; use separate assistants for simultaneous environments.",
+    "files": [
+      "lib/help/help-registry.js"
+    ]
+  },
+  "m5c19a95e": {
+    "source": "DID",
+    "files": [
+      "app/(portal)/admin/phones-provisioning/page.jsx"
+    ]
+  },
+  "mc575aa90": {
+    "source": "Local SIP controller",
+    "files": [
+      "app/(portal)/admin/phones-provisioning/page.jsx"
+    ]
+  },
+  "mb11bf3bf": {
+    "source": "The device reports the adapter name. Choose the paired model for its name and picture; this does not change call controls or audio routing.",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "m7e100256": {
+    "source": "Use the softphone to hold or resume calls. No hold button is reported by this device.",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "mf5f70c40": {
+    "source": "Wearing sensor",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "ma618cb01": {
+    "source": "Automatic mute can be configured in Poly Studio. This connection does not report whether the headset is being worn, so automatic hold and custom sensor actions are unavailable.",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "m21de52f5": {
+    "source": "Voyager Focus UC with BT600: press the Call button twice to hold an active call. Press it twice again to resume.",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "m0ac4cc14": {
+    "source": "IP address",
+    "files": [
+      "app/(portal)/admin/phones-provisioning/page.jsx"
+    ]
+  },
+  "me2c53cc6": {
+    "source": "Port",
+    "files": [
+      "app/(portal)/admin/phones-provisioning/page.jsx"
+    ]
+  },
+  "m6f1c6efd": {
+    "source": "Select a number to call. Dialing starts directly on your phone.",
+    "files": [
+      "components/telephony/NativeSoftphone.jsx"
+    ]
+  },
+  "md12e7e24": {
+    "source": "Phones available to your account",
+    "files": [
+      "components/telephony/CompactPhonePicker.jsx"
+    ]
+  },
+  "mfdef3984": {
+    "source": "Find / configure phones",
+    "files": [
+      "components/telephony/CompactPhonePicker.jsx"
+    ]
+  },
+  "m301a1bca": {
+    "source": "Nearby",
+    "files": [
+      "components/telephony/CompactPhonePicker.jsx",
+      "components/telephony/DesktopPhoneSetup.jsx"
+    ]
+  },
+  "me7d1d890": {
+    "source": "My phones",
+    "files": [
+      "components/telephony/CompactPhonePicker.jsx"
+    ]
+  },
+  "md14dd0c3": {
+    "source": "Organization stations",
+    "files": [
+      "components/telephony/CompactPhonePicker.jsx"
+    ]
+  },
+  "mc64d2a5e": {
+    "source": "Finding local phones",
+    "files": [
+      "components/telephony/CompactPhonePicker.jsx"
+    ]
+  },
+  "mbacca091": {
+    "source": "Local discovery failed. Open Find / configure phones to retry.",
+    "files": [
+      "components/telephony/CompactPhonePicker.jsx"
+    ]
+  },
+  "me83e0445": {
+    "source": "Local phones",
+    "files": [
+      "components/telephony/DesktopDiscoveryMenu.jsx"
+    ]
+  },
+  "m51300ff1": {
+    "source": "Find and configure a phone on this network.",
+    "files": [
+      "components/telephony/DesktopDiscoveryMenu.jsx"
+    ]
+  },
+  "m010bacf8": {
+    "source": "Back to phones",
+    "files": [
+      "components/telephony/DesktopPhoneSetup.jsx"
+    ]
+  },
+  "mc798ce97": {
+    "source": "Find phones",
+    "files": [
+      "components/telephony/DesktopPhoneSetup.jsx"
+    ]
+  },
+  "mb302a08a": {
+    "source": "Connect your phone and computer to the same network. Choose a discovered phone to configure it.",
+    "files": [
+      "components/telephony/DesktopPhoneSetup.jsx"
+    ]
+  },
+  "m0232286e": {
+    "source": "Checking your phone…",
+    "files": [
+      "components/telephony/DesktopPhoneSetup.jsx"
+    ]
+  },
+  "mcd699785": {
+    "source": "Phone configured",
+    "files": [
+      "components/telephony/DesktopPhoneSetup.jsx"
+    ]
+  },
+  "m0e75fad7": {
+    "source": "Return to the phone list and choose this phone to start working.",
+    "files": [
+      "components/telephony/DesktopPhoneSetup.jsx"
+    ]
+  },
+  "mc74c9706": {
+    "source": "The factory password was not accepted. Enter this phone's administrator password.",
+    "files": [
+      "components/telephony/DesktopPhoneSetup.jsx"
+    ]
+  },
+  "mc0a96c7b": {
+    "source": "Phone administrator password",
+    "files": [
+      "components/telephony/DesktopPhoneSetup.jsx"
+    ]
+  },
+  "madb2e542": {
+    "source": "Connect to phone",
+    "files": [
+      "components/telephony/DesktopPhoneSetup.jsx"
+    ]
+  },
+  "medfd0d85": {
+    "source": "Access verified. Configure this phone for Contact Center; its extension will be assigned automatically.",
+    "files": [
+      "components/telephony/DesktopPhoneSetup.jsx"
+    ]
+  },
+  "mcc380037": {
+    "source": "This T22P uses legacy local management. Remote control may require confirmation on its screen.",
+    "files": [
+      "components/telephony/DesktopPhoneSetup.jsx"
+    ]
+  },
+  "ma1649b8b": {
+    "source": "Configure phone",
+    "files": [
+      "components/telephony/DesktopPhoneSetup.jsx"
+    ]
+  },
+  "m2b862ff2": {
+    "source": "Find a local phone",
+    "files": [
+      "components/telephony/DesktopPhoneSetup.jsx"
+    ]
+  },
+  "m408769a1": {
+    "source": "No phones found. Check the network and allow local network access for Contact Center Desktop.",
+    "files": [
+      "components/telephony/DesktopPhoneSetup.jsx"
+    ]
+  },
+  "m5f02b437": {
+    "source": "Choose Find phones to search your local network.",
+    "files": [
+      "components/telephony/DesktopPhoneSetup.jsx"
+    ]
+  },
+  "m4768dce9": {
+    "source": "This network is larger than the automatic scan range. Ask your administrator about undiscovered stations.",
+    "files": [
+      "components/telephony/DesktopPhoneSetup.jsx"
+    ]
+  },
+  "m18fede63": {
+    "source": "Configuring your phone. It may restart; keep this app open until verification finishes.",
+    "files": [
+      "components/telephony/DesktopPhoneSetup.jsx"
+    ]
+  },
+  "mb04875b5": {
+    "source": "Sign in to Contact Center Desktop",
+    "files": [
+      "app/signin/desktop/sign-in.jsx",
+      "app/signin/desktop/browser-sign-in.jsx"
+    ]
+  },
+  "m6b80e06b": {
+    "source": "This sign-in request expired. Start again in the desktop app.",
+    "files": [
+      "app/signin/desktop/sign-in.jsx",
+      "app/signin/desktop/browser-sign-in.jsx"
+    ]
+  },
+  "maa59e6e5": {
+    "source": "Sign-in confirmed. Return to the desktop app; you can close this tab.",
+    "files": [
+      "app/signin/desktop/sign-in.jsx"
+    ]
+  },
+  "m69d72ea4": {
+    "source": "Only continue if you started sign-in in your desktop app and the code below matches.",
+    "files": [
+      "app/signin/desktop/sign-in.jsx"
+    ]
+  },
+  "m89dd54da": {
+    "source": "Continue to desktop app",
+    "files": [
+      "app/signin/desktop/sign-in.jsx"
+    ]
+  },
+  "m2f6324bc": {
+    "source": "Complete sign-in in your browser. Confirm this code:",
+    "files": [
+      "components/login-form.jsx"
+    ]
+  },
+  "m1d92c8b2": {
+    "source": "Preparing configuration and recovery copy…",
+    "files": [
+      "components/telephony/DesktopPhoneSetup.jsx"
+    ]
+  },
+  "mbdfa8c09": {
+    "source": "Saving phone settings and administrator password…",
+    "files": [
+      "components/telephony/DesktopPhoneSetup.jsx"
+    ]
+  },
+  "m74d508aa": {
+    "source": "Verifying settings with the new administrator password…",
+    "files": [
+      "components/telephony/DesktopPhoneSetup.jsx"
+    ]
+  },
+  "ma032b85d": {
+    "source": "Connecting the desktop bridge…",
+    "files": [
+      "components/telephony/DesktopPhoneSetup.jsx"
+    ]
+  },
+  "m6e5813db": {
+    "source": "Restarting the phone…",
+    "files": [
+      "components/telephony/DesktopPhoneSetup.jsx"
+    ]
+  },
+  "m3de3e701": {
+    "source": "Waiting for the phone to come back online…",
+    "files": [
+      "components/telephony/DesktopPhoneSetup.jsx"
+    ]
+  },
+  "m479ffd88": {
+    "source": "Checking SIP registration…",
+    "files": [
+      "components/telephony/DesktopPhoneSetup.jsx"
+    ]
+  },
+  "mff904438": {
+    "source": "Settings saved · activation not yet confirmed",
+    "files": [
+      "components/telephony/DesktopPhoneSetup.jsx"
+    ]
+  },
+  "m8da336c2": {
+    "source": "Phone setup could not be completed",
+    "files": [
+      "components/telephony/DesktopPhoneSetup.jsx"
+    ]
+  },
+  "mfd2390fa": {
+    "source": "Keep this app open. The phone may restart; verification can take up to four minutes.",
+    "files": [
+      "components/telephony/DesktopPhoneSetup.jsx"
+    ]
+  },
+  "m7ac23126": {
+    "source": "Keep the bridge running. Check activation again without changing settings or restarting the phone.",
+    "files": [
+      "components/telephony/DesktopPhoneSetup.jsx"
+    ]
+  },
+  "m501452fe": {
+    "source": "Access verified. Its extension will be assigned automatically.",
+    "files": [
+      "components/telephony/DesktopPhoneSetup.jsx"
+    ]
+  },
+  "m8f7c269d": {
+    "source": "Check activation",
+    "files": [
+      "components/telephony/DesktopPhoneSetup.jsx"
+    ]
+  },
+  "m3f515059": {
+    "source": "Waiting for the phone to accept activation…",
+    "files": [
+      "components/telephony/DesktopPhoneSetup.jsx"
+    ]
+  },
+  "m6d5af37a": {
+    "source": "Checking status only. The phone will not restart.",
+    "files": [
+      "components/telephony/DesktopPhoneSetup.jsx"
+    ]
+  },
+  "mec9eab87": {
+    "source": "New audio device detected",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "m994ac962": {
+    "source": "Use this device",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "m325da7d3": {
+    "source": "Keep current audio",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "mc1e826cd": {
+    "source": "Audio device disconnected. Using system audio.",
+    "files": [
+      "components/headsets/HeadsetStatusBadge.jsx"
+    ]
+  },
+  "me33335b2": {
+    "source": "Opening Google sign-in. You will return to the desktop app automatically.",
+    "files": [
+      "app/signin/desktop/browser-sign-in.jsx"
+    ]
+  },
+  "me2b7f44c": {
+    "source": "Completing sign-in...",
+    "files": [
+      "components/login-form.jsx"
+    ]
+  },
+  "m0a44ff97": {
+    "source": "Continue in your browser. This app will open automatically after sign-in.",
+    "files": [
+      "components/login-form.jsx"
     ]
   }
 }

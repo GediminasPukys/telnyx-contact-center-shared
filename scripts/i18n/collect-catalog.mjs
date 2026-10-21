@@ -90,7 +90,7 @@ for (const file of files) {
   });
 }
 for (const source of ['Agent', 'Supervisor', 'Admin', 'Connect', 'Assist', 'Resolve', 'Observe', 'Coach', 'Improve', 'Configure', 'Control', 'Scale', 'read', 'create', 'update', 'delete', 'Break', 'Wrapup', 'Agent Not Answering', 'View queues', 'View agents', 'Closed today', 'SLA today', 'Live interactions', 'Global capacity', 'Completed today', 'Average handling', 'Available', 'Busy', 'Away', 'Offline', 'Unknown', 'Agent Desktop', 'Agent Workspace', 'Supervisor Workspace', 'Admin Workspace', 'Failed to save profile', 'Unsupported interface language']) add(source, 'components/i18n/use-ui-text.jsx');
-for (const entry of EPOS_DEVICE_CATALOG) for (const source of [entry.status, ...entry.capabilities]) add(source, 'lib/headsets/headset-device-catalog.js');
+for (const entry of EPOS_DEVICE_CATALOG) for (const source of [entry.status, ...(entry.capabilities || [])]) add(source, 'lib/headsets/headset-device-catalog.js');
 for (const role of [...SYSTEM_ROLES, ...PRESET_ROLES]) for (const text of [role.name, role.description]) add(text, 'lib/authz/permissions.mjs');
 for (const text of Object.values(documentPreviewCopy('en-US'))) add(text, 'lib/documents/preview-copy.mjs');
 for (const status of DEFAULT_AGENT_STATUSES) {

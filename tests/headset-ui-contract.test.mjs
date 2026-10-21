@@ -1,57 +1,19 @@
-import assert from "node:assert/strict";
-import { test } from "node:test";
-import { readFileSync } from "./helpers/ui-source.mjs";
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
-
-const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
-const src = (rel) => readFileSync(join(repoRoot, rel), "utf8");
-
-test("softphone mini owns the headset control trigger immediately before contact picker", () => {
-  const siteHeader = src("components/site-header.jsx");
-  const softphoneMini = src("components/softphone-mini.jsx");
-  assert.doesNotMatch(siteHeader, /HeadsetStatusBadge/);
-  assert.match(softphoneMini, /from\s+["']@\/components\/headsets\/HeadsetStatusBadge["']/);
-  assert.match(softphoneMini, /experimentalFeaturesEnabled \? <HeadsetStatusBadge\s*\/> : null/);
-  assert.match(softphoneMini, /HeadsetStatusBadge[\s\S]*?title="Select number from contacts"/);
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { readFileSync } from './helpers/ui-source.mjs';
+const src = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
+test('mini owns headset lifecycle and expanded phone shares call commands', () => {
+  const mini = src('components/softphone-mini.jsx'), full = src('components/softphone.jsx');
+  assert.match(mini, /startHeadsetSession/); assert.match(mini, /createHeadsetCommandController/); assert.match(mini, /useHeadsetAccess/);
+  assert.doesNotMatch(full, /startHeadsetSession|getHeadsetControlService|<audio/); assert.match(full, /callStateActions/); assert.doesNotMatch(full, /getHeadsetAudioRouter|enumerateDevices|showRegionList|showMicList|showSpkList/);
 });
-
-test("headset UI uses the shared Jabra/EPOS service and a direction-aware sheet", () => {
-  const badge = src("components/headsets/HeadsetStatusBadge.jsx");
-  const clientService = src("lib/headsets/client-headset-service.js");
-  assert.match(badge, /initHeadsetControlService/);
-  assert.match(badge, /isHeadsetIntegrationEnabled/);
-  assert.match(badge, /requestPermission\("jabra"\)/);
-  assert.match(badge, /onDiagnostic/);
-  assert.match(badge, /recordDiagnostic\(diagnostic\.message/);
-  assert.match(badge, /SheetContent[\s\S]*side="end"/);
-  assert.doesNotMatch(badge, /DialogContent/);
-  assert.match(clientService, /createJabraAdapter/);
-  assert.match(clientService, /createEposAdapter/);
-  assert.match(clientService, /NEXT_PUBLIC_HEADSET_INTEGRATION_ENABLED/);
+test('headset panel shares modal tokens, compact buttons and loading skeletons', () => {
+  const ui = src('components/headsets/HeadsetStatusBadge.jsx');
+  assert.match(ui, /<Button/); assert.match(ui, /max-w-lg/); assert.match(ui, /rounded-3xl/); assert.match(ui, /var\(--modal,/); assert.match(ui, /Skeleton/);
+  assert.match(ui, /requestPermission\("poly"\)/); assert.match(ui, /requestPermission\("jabra"\)/);
+  assert.doesNotMatch(ui, /sendTestCommand\("(muteOn|muteOff|holdOn)"\)/);
 });
-
-test("headset sheet ships EPOS BTD 800 and MB Pro 2 catalog artwork", () => {
-  const catalog = src("lib/headsets/headset-device-catalog.js");
-  assert.match(catalog, /BTD 800 USB for Lync/);
-  assert.match(catalog, /MB Pro 2/);
-  assert.match(catalog, /\/images\/headsets\/epos\/btd-800-usb\.png/);
-  assert.match(catalog, /\/images\/headsets\/epos\/mb-pro-2\.png/);
-});
-
-test("mini softphone is the single owner of headset state and commands", () => {
-  const softphone = src("components/softphone.jsx");
-  const softphoneMini = src("components/softphone-mini.jsx");
-
-  assert.doesNotMatch(softphone, /getHeadsetControlService/);
-  assert.doesNotMatch(softphone, /setSoftphoneState/);
-  assert.doesNotMatch(softphone, /onCommand/);
-  assert.doesNotMatch(softphone, /HEADSET_COMMANDS\./);
-
-  assert.match(softphoneMini, /getHeadsetControlService/);
-  assert.match(softphoneMini, /setSoftphoneState/);
-  assert.match(softphoneMini, /onCommand/);
-  assert.match(softphoneMini, /HEADSET_COMMANDS\.ANSWER/);
-  assert.match(softphoneMini, /HEADSET_COMMANDS\.MUTE/);
-  assert.match(softphoneMini, /HEADSET_COMMANDS\.HOLD/);
+test('runtime policy endpoints require authenticated user and explicit settings permissions', () => {
+  const route = src('app/api/admin/headsets/route.js'); assert.match(route, /withPermission\("system_settings:read"/); assert.match(route, /withPermission\("system_settings:update"/);
+  assert.match(src('app/api/user/headsets/route.js'), /withPermission\("authenticated"/);
 });

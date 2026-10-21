@@ -31,6 +31,7 @@ fixture.emitSnapshot = (state) => {
 const json = (body, status = 200) => new Response(JSON.stringify(body), {status, headers:{'Content-Type':'application/json'}});
 window.fetch = async (url, options = {}) => {
   if (url === '/api/user/profile') return json({data:{voice_enabled:true}});
+  if (url === '/api/telephony/stations' && !options.method) return json({choice:{kind:'web'},stations:[]});
   if (url === '/api/contact-center/agent/voice-endpoints') {
     if (options.method === 'POST') {
       fixture.registrations++;

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getPostgresPool } from "@/lib/postgres.mjs";
 import { normalizeMac } from "@/lib/hardphones/config-generators.mjs";
 import { recordProvisioningEvent } from "@/lib/hardphones/logging.mjs";
+import { authorizeProvisioningEvent, getProvisioningEnrollment } from "@/lib/hardphones/provisioning-access.mjs";
 
 export const dynamic = "force-dynamic";
 
@@ -66,13 +67,20 @@ async function handleEvent(request, vendor) {
 
   if (!mac) return NextResponse.json({ error: "Valid MAC address is required" }, { status: 400 });
 
-  const { rows } = await pool.query(`SELECT id FROM hp_phones WHERE mac = $1`, [mac]);
+  const { rows } = await pool.query(`SELECT id, mac, vendor, provisioning_state FROM hp_phones WHERE mac = $1`, [mac]);
   const phoneId = rows[0]?.id || null;
   if (!phoneId) return NextResponse.json({ error: "Phone not found" }, { status: 404 });
+  if (rows[0].vendor !== vendor || rows[0].provisioning_state === "disabled") return new NextResponse("Not found", { status: 404 });
+  if (vendor === "polycom") {
+    const enrollment = await getProvisioningEnrollment(pool, phoneId);
+    if (!authorizeProvisioningEvent(request.headers.get("authorization"), rows[0], enrollment)) return new NextResponse("Unauthorized", { status: 401, headers: { "WWW-Authenticate": 'Basic realm="CC phone events"', "Cache-Control": "no-store" } });
+  }
+  delete queryParams.token;
 
-  const ip = extractPhoneIp({ queryParams, body });
+  // A phone notification is not authority to redirect server-side CTI requests.
+  const ip = vendor === "polycom" ? null : extractPhoneIp({ queryParams, body });
   const sourceIp = requestSourceIp(request);
-  const registrationStatus = registrationStatusFromEvent({ vendor, queryParams, body });
+  const registrationStatus = vendor === "polycom" ? null : registrationStatusFromEvent({ vendor, queryParams, body });
   await pool.query(
     `UPDATE hp_phones
      SET last_seen_at = NOW(),

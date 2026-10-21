@@ -65,7 +65,7 @@ Poly status:
 ```bash
 TOKEN=$(grep '^BRIDGE_TOKEN=' .env | cut -d= -f2-)
 curl -sS -H "Authorization: Bearer $TOKEN" \
-  http://127.0.0.1:8787/v1/polycom/10.10.10.121/status
+  http://127.0.0.1:8787/v1/polycom/192.168.50.121/status
 ```
 
 Poly dial:
@@ -73,7 +73,7 @@ Poly dial:
 ```bash
 curl -sS -X POST -H "Authorization: Bearer $TOKEN" -H 'content-type: application/json' \
   -d '{"number":"+48123123123","admin_password":"<phone-admin-password>"}' \
-  http://127.0.0.1:8787/v1/polycom/10.10.10.121/dial
+  http://127.0.0.1:8787/v1/polycom/192.168.50.121/dial
 ```
 
 ## Target architecture for production bridge mode

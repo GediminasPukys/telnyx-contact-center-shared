@@ -62,7 +62,7 @@ describe("hard phones CTI driver layer (Phase 2)", () => {
     const localBridgeCode = await src("lib/hardphones/drivers/local-bridge.mjs");
     assert.match(page, /const reachableIp = phone\.last_ip \|\| phone\.ip_address/);
     assert.doesNotMatch(page, /const reachableIp = phone\.ip_address \|\| phone\.last_ip/);
-    assert.match(yealinkCode, /phone\.last_ip \|\| phone\.ip_address/);
+    assert.match(yealinkCode, /phone\.ip_address \|\| phone\.last_ip/);
     assert.match(polycomCode, /phone\.last_ip \|\| phone\.ip_address/);
     assert.match(localBridgeCode, /phone\?\.last_ip \|\| phone\?\.ip_address/);
   });
@@ -85,10 +85,27 @@ describe("hard phones CTI driver layer (Phase 2)", () => {
     const driver = createTelnyxFallbackDriver({ pool: null });
     assert.deepStrictEqual(await driver.dial({ id: "p-1", assigned_phone_number: "+17205550102" }, "+48123"), { ok: false, reason: "phone_has_no_sip_credential" });
     const answer = await driver.answer();
-    assert.deepStrictEqual(answer, { ok: true, note: "telnyx-managed bridge" });
+    assert.deepStrictEqual(answer, { ok: false, reason: "answer_requires_handset_or_native_cti" });
     assert.deepStrictEqual(await driver.mute({ id: "p-1" }), { ok: false, reason: "mute_not_supported_for_telnyx_bridge" });
     assert.deepStrictEqual(await driver.hangup({ id: "p-1" }), { ok: false, reason: "no_active_call" });
     assert.deepStrictEqual(await driver.reprovision(), { ok: false, reason: "not_supported_use_polling" });
+  });
+
+  it("bridge hold and resume report the missing capability without changing call state", async () => {
+    const statements = [];
+    const driver = createTelnyxFallbackDriver({ pool: {
+      async query(sql) {
+        statements.push(sql);
+        return { rows: [{ call_control_id: "owned-test-leg", status: "answered" }] };
+      },
+    } });
+    for (const action of ["hold", "resume"]) {
+      assert.deepStrictEqual(await driver[action]({ id: "p-1" }), {
+        ok: false, reason: "hold_requires_native_cti_or_conference",
+      });
+    }
+    assert.strictEqual(statements.length, 2);
+    assert.ok(statements.every(sql => /^\s*SELECT/.test(sql)));
   });
 
   it("telnyx fallback creates phone and target legs through the CTI webhook and rejects extension caller IDs", async () => {
@@ -235,13 +252,11 @@ describe("hard phones CTI driver layer (Phase 2)", () => {
     assert.doesNotMatch(code, /actions\/transfer/);
   });
 
-  it("phone events capture explicit phone IP for CTI reachability without trusting proxy headers", async () => {
+  it("configuration downloads cannot replace enrolled management IPs with proxy headers", async () => {
     const serveCode = await src("app/api/provisioning/[filename]/route.js");
-    assert.match(serveCode, /trustedPhoneSourceIp\(request\)/);
-    assert.match(serveCode, /isPrivatePhoneIp\(sourceIp\)/);
-    assert.match(serveCode, /!isLikelyGatewayIp\(sourceIp\)/);
-    assert.match(serveCode, /last_ip = COALESCE\(\$3, last_ip\)/);
-    assert.match(serveCode, /sourceIp, detectedIp: phoneSourceIp/);
+    assert.doesNotMatch(serveCode, /last_ip\s*=|ip_address\s*=/);
+    assert.match(serveCode, /authorizeProvisioning\(request\.headers\.get\("authorization"\), phone, enrollment\)/);
+    assert.match(serveCode, /userAgent, sourceIp/);
     const eventsCode = await src("app/api/provisioning/events/[vendor]/route.js");
     assert.match(eventsCode, /last_ip = COALESCE/);
     assert.match(eventsCode, /ip_address = COALESCE/);
@@ -329,20 +344,20 @@ describe("hard phones CTI driver layer (Phase 2)", () => {
     assert.match(code, /Yealink Action URI/);
   });
 
-  it("polycom driver uses phone-local HTTP clients with self-signed HTTPS support and HTTP fallback", async () => {
+  it("polycom driver pins enrolled certificates and only allows explicit legacy HTTP", async () => {
     const code = await src("lib/hardphones/drivers/polycom.mjs");
     assert.match(code, /import https from "node:https"/);
-    assert.match(code, /rejectUnauthorized: false/);
-    assert.match(code, /https:\/\/\$\{host\}\$\{path\}/);
+    assert.match(code, /createDeviceTlsAgent/);
+    assert.match(code, /certificate_changed/);
     assert.match(code, /http:\/\/\$\{host\}\$\{path\}/);
-    assert.match(code, /shouldRetryPolyOverHttp/);
+    assert.match(code, /allow_http_cti !== true/);
   });
 
   it("polycom driver covers the REST call-control surface", async () => {
     const code = await src("lib/hardphones/drivers/polycom.mjs");
     assert.match(code, /\/api\/v1\/callctrl\/dial/);
-    assert.match(code, /Dest: String\(number\), Line: "1"/);
-    assert.doesNotMatch(code, /Type: "SIP" \}/);
+    // SIP versus telephone dialing payloads are exercised behaviorally in
+    // polycom-integration.test.mjs (and against the LAN SIP receiver).
     assert.match(code, /\/api\/v1\/callctrl\/answerCall/);
     assert.match(code, /\/api\/v1\/callctrl\/endCall/);
     assert.match(code, /\/api\/v1\/callctrl\/holdCall/);
@@ -353,16 +368,17 @@ describe("hard phones CTI driver layer (Phase 2)", () => {
     assert.match(code, /\/api\/v1\/webCallControl\/callStatus/);
     assert.match(code, /\/api\/v1\/mgmt\/updateConfiguration/);
     assert.match(code, /\/api\/v1\/mgmt\/safeReboot/);
-    assert.match(code, /shouldRetryPolyOverHttp/);
+    assert.match(code, /allow_http_cti !== true/);
     assert.match(code, /4010/);
   });
 
   it("yealink driver uses Action URI commands and Web API status", async () => {
     const code = await src("lib/hardphones/drivers/yealink.mjs");
     assert.match(code, /servlet\?/);
-    assert.match(code, /key=OK/);
-    assert.match(code, /key=CALLEND/);
-    assert.match(code, /key=F_HOLD/);
+    assert.match(code, /callAction\(phone, "ASW", callRef\)/);
+    assert.match(code, /callAction\(phone, "CANCEL", callRef, "CALLEND"\)/);
+    assert.match(code, /callAction\(phone, "HOLD", callRef, "F_HOLD"\)/);
+    assert.match(code, /callAction\(phone, "UNHOLD", callRef, "F_HOLD"\)/);
     assert.match(code, /key=MUTE/);
     assert.match(code, /key=AUTOP/);
     assert.match(code, /key=Reboot/);

@@ -4,12 +4,14 @@ import { readFile } from "./helpers/ui-source.mjs";
 import { existsSync, readdirSync } from "node:fs";
 import {
   createPhoneSipConnection,
-  updatePhoneSipConnectionCallerId,
+  clearPhoneSipConnectionCallerId,
   phoneConnectionUserName,
   phoneConnectionName,
 } from "../lib/hardphones/credentials.mjs";
 import {
   normalizeMac,
+  phoneLineLabel,
+  validatePhoneLineLabel,
   formatMac,
   resolveProvisioningRequest,
   buildConfigForPhone,
@@ -68,6 +70,36 @@ describe("hard phones provisioning (Phase 1)", () => {
     assert.deepStrictEqual(SUPPORTED_VENDORS, ["polycom", "yealink", "audiocodes"]);
   });
 
+  it("preserves custom line labels over extensions and restores the default when cleared", () => {
+    assert.equal(phoneLineLabel({...phone,extension:"1001",label:"Conference Warsaw"}), "Conference Warsaw");
+    assert.equal(phoneLineLabel({...phone,extension:"1001",label:null}), "1001");
+    assert.throws(()=>validatePhoneLineLabel("a\nb","polycom"), /control characters/);
+    assert.throws(()=>validatePhoneLineLabel("a".repeat(100),"yealink"), /99/);
+    assert.equal(validatePhoneLineLabel("a".repeat(256),"polycom").length,256);
+    assert.match(polycomRegistrationConfig({...phone,extension:"1001",label:'Room & "Board"'}), /reg\.1\.label="Room &amp; &quot;Board&quot;"/);
+    assert.ok(audiocodesPhoneConfig({...phone,model:"440HD",label:"Conference"}).includes("voip/line/0/extension_display=Conference"));
+  });
+
+  it("uses assigned 3–5 digit extensions on every vendor display without changing SIP credentials", () => {
+    for (const extension of ["101", "1001", "10001"]) {
+      const assigned = { ...phone, label: null, extension, assigned_phone_number:"+15551234567" };
+      const poly = polycomRegistrationConfig(assigned);
+      assert.match(poly, new RegExp(`reg\\.1\\.label="${extension}"`));
+      assert.match(poly, new RegExp(`reg\\.1\\.displayName="${extension}"`));
+      assert.match(poly, /reg\.1\.auth\.userId="gencredabc123"/);
+      assert.match(poly, /reg\.1\.address="gencredabc123"/);
+      const yealink = yealinkPhoneConfig(assigned);
+      assert.ok(yealink.includes(`account.1.label = ${extension}`));
+      assert.ok(yealink.includes(`linekey.1.label = ${extension}`));
+      assert.ok(yealink.includes("account.1.user_name = gencredabc123"));
+      const audiocodes = audiocodesPhoneConfig(assigned);
+      assert.ok(audiocodes.includes(`voip/line/0/description=${extension}`));
+      assert.ok(audiocodes.includes("voip/line/0/id=gencredabc123"));
+      for (const config of [poly,yealink,audiocodes]) assert.ok(!config.includes("+15551234567"));
+    }
+    assert.match(polycomRegistrationConfig({...phone,extension:null}),/reg\.1\.label="Desk 12"/);
+  });
+
   it("derives Telnyx SIP connection usernames with phone prefix before the MAC", () => {
     assert.strictEqual(phoneConnectionUserName("00:04:F2:AB:CD:EF"), "phone0004F2ABCDEF");
     assert.strictEqual(phoneConnectionUserName("805ec0123456"), "phone805EC0123456");
@@ -99,8 +131,10 @@ describe("hard phones provisioning (Phase 1)", () => {
       assert.strictEqual(createBody.user_name, "phone0004F2000001");
       assert.strictEqual(createBody.inbound.ani_number_format, "+E.164");
       assert.strictEqual(createBody.inbound.dnis_number_format, "+e164");
-      assert.strictEqual(createBody.outbound.ani_override, "+17205550102");
-      assert.strictEqual(createBody.outbound.ani_override_type, "always");
+      assert.deepEqual(createBody.inbound.codecs, ["G711U", "G711A", "G722", "G729"]);
+      assert.equal(createBody.outbound.ani_override, undefined, "The device DID must never override per-call From");
+      assert.equal(createBody.outbound.ani_override_type, undefined);
+      assert.equal(createBody.outbound.call_parking_enabled, true);
       assert.strictEqual(calls[1].options.method, "PATCH");
       assert.strictEqual(JSON.parse(calls[1].options.body).user_name, "phone0004F2000001");
     } finally {
@@ -122,12 +156,11 @@ describe("hard phones provisioning (Phase 1)", () => {
     };
     process.env.TELNYX_API_KEY = "test-key";
     try {
-      await updatePhoneSipConnectionCallerId({ connectionId: "cc-123", phoneNumber: null });
+      await clearPhoneSipConnectionCallerId({ connectionId: "cc-123" });
       assert.strictEqual(calls.length, 1);
       assert.strictEqual(calls[0].options.method, "PATCH");
       assert.deepStrictEqual(JSON.parse(calls[0].options.body).outbound, {
         ani_override: "",
-        ani_override_type: "always",
       });
     } finally {
       globalThis.fetch = originalFetch;
@@ -149,8 +182,8 @@ describe("hard phones provisioning (Phase 1)", () => {
 
   it("generates Polycom master and registration XML with Telnyx registration", () => {
     const master = polycomMasterConfig();
-    assert.match(master, /CONFIG_FILES="\[PHONE_MAC_ADDRESS\]-phone\.cfg,\[PHONE_MAC_ADDRESS\]-reg\.cfg"/);
-    const reg = polycomRegistrationConfig(phone, { baseUrl: "https://cc.example.com" });
+    assert.match(master, /CONFIG_FILES="\[PHONE_MAC_ADDRESS\]-reg\.cfg"/);
+    const reg = polycomRegistrationConfig(phone, { baseUrl: "https://cc.example.com", eventToken: "device-event-token" });
     assert.match(reg, /reg\.1\.address="gencredabc123"/);
     assert.match(reg, /reg\.1\.auth\.userId="gencredabc123"/);
     assert.match(reg, /reg\.1\.auth\.password="secretpw"/);
@@ -176,7 +209,7 @@ describe("hard phones provisioning (Phase 1)", () => {
     assert.match(cfg, /account\.1\.user_name = gencredabc123/);
     assert.match(cfg, /account\.1\.password = secretpw/);
     assert.match(cfg, /account\.1\.sip_server\.1\.address = sip\.telnyx\.com/);
-    assert.match(cfg, /features\.action_uri\.enable = 1/);
+    assert.match(cfg, /features\.action_uri\.enable = 0/);
     assert.match(cfg, /action_url\.incoming_call = /);
     assert.match(cfg, /action_url\.call_terminated = /);
     assert.match(cfg, /static\.security\.user_password = admin:newadminpw/);
@@ -202,16 +235,13 @@ describe("hard phones provisioning (Phase 1)", () => {
     assert.match(cfg, /voip\/line\/0\/auth_name=gencredabc123/);
     assert.match(cfg, /voip\/line\/0\/auth_password=secretpw/);
     assert.match(cfg, /voip\/signalling\/sip\/proxy_address=sip\.telnyx\.com/);
-    assert.match(cfg, /provisioning\/configuration\/url=https:\/\/cc\.example\.com\/api\/provisioning\/<MAC>\.cfg/);
-    assert.match(cfg, /provisioning\/check_sync\/enabled=1/);
+    assert.ok(cfg.includes(`provisioning/configuration/url=https://cc.example.com/api/provisioning/${phone.mac}.cfg`));
+    assert.match(cfg, /voip\/services\/notify\/check_sync\/force_reboot_enabled=0/);
     assert.match(cfg, /voip\/auto_answer\/enabled=1/);
     assert.match(cfg, /system\/password=newadminpw/);
-    assert.match(cfg, /provisioning\/firmware\/auto_update=1/);
     assert.match(cfg, /provisioning\/firmware\/url=https:\/\/firmware\.example\.com\/poly\//);
-    assert.match(cfg, /provisioning\/custom_configuration\/url=https:\/\/cfg\.example\.com\/extra\.cfg/);
-    assert.match(cfg, /system\/time\/ntp_server=time\.example\.com/);
-    assert.match(cfg, /system\/line_keys=3/);
-    assert.match(cfg, /system\/syslog\/server=10\.0\.0\.10/);
+    assert.match(cfg, /system\/ntp\/primary_server_address=time\.example\.com/);
+    assert.match(cfg, /system\/syslog\/server_address=10\.0\.0\.10/);
   });
 
   it("uses the Telnyx credential username as SIP line identity for registration", () => {
@@ -271,8 +301,8 @@ describe("hard phones provisioning (Phase 1)", () => {
     assert.match(yealink, new RegExp(`local_time\\.time_zone = \\${warsawYealinkOffset}`));
 
     const audiocodes = audiocodesPhoneConfig({ ...warsawPhone, vendor: "audiocodes" }, { baseUrl: "https://cc.example.com" });
-    assert.match(audiocodes, /system\/time\/timezone=Europe\/Warsaw/);
-    assert.match(audiocodes, new RegExp(`system/time/gmt_offset=${warsawOffset}`));
+    assert.ok(audiocodes.includes(`system/ntp/gmt_offset=+${String(warsawOffset / 3600).padStart(2,"0")}:00`));
+    assert.match(audiocodes, /network\/lan\/dhcp\/ntp\/gmt_offset\/enabled=0/);
   });
 
   it("builds per-vendor config from the request kind", () => {
@@ -282,8 +312,7 @@ describe("hard phones provisioning (Phase 1)", () => {
     const polyReg = buildConfigForPhone(phone, "registration", {});
     assert.match(polyReg.body, /reg\.1\.address/);
     const polyPhone = buildConfigForPhone(phone, "phone", {});
-    assert.match(polyPhone.body, /reg\.1\.address/);
-    assert.strictEqual(polyPhone.contentType, "text/xml");
+    assert.strictEqual(polyPhone, null);
     const yl = buildConfigForPhone({ ...phone, vendor: "yealink" }, "mac-config", {});
     assert.match(yl.body, /account\.1\.enable = 1/);
     assert.strictEqual(yl.contentType, "text/plain");
@@ -332,7 +361,7 @@ describe("hard phones provisioning (Phase 1)", () => {
   it("public provisioning endpoint serves configs only for inventoried phones", async () => {
     const code = await src("app/api/provisioning/[filename]/route.js");
     assert.match(code, /resolveProvisioningRequest/);
-    assert.match(code, /SELECT id, mac, vendor, model, label, assigned_phone_number_id, assigned_phone_number, sip_username/);
+    assert.match(code, /SELECT id, mac, vendor, model, phone_name, label, assigned_phone_number_id, assigned_phone_number, sip_username/);
     assert.match(code, /buildConfigForPhone\(phone/);
     assert.match(code, /unknown_phone_request/);
     assert.match(code, /config_served/);
@@ -353,20 +382,20 @@ describe("hard phones provisioning (Phase 1)", () => {
     assert.match(code, /normalizeMac/);
   });
 
-  it("page uses 3-panel layout with dashboard, phones, bridges, logs and settings sections", async () => {
-    const code = await src("app/(portal)/admin/phones-provisioning/page.jsx");
+  it("page uses 3-panel layout with phones, bridges, logs and settings sections", async () => {
+    const code = await src("app/(portal)/admin/phones-provisioning/page.jsx") + await src("lib/hardphones/model-catalog.mjs");
     assert.match(code, /Context settings/);
-    assert.match(code, /SectionRail/);
-    assert.match(code, /SECTION_RAIL_PAGE_GRID_CLASS/);
+    assert.match(code, /SystemSectionPage/);
+    assert.match(code, /TabsList/);
     assert.match(code, /380px/);
-    assert.match(code, /Dashboard/);
+    assert.doesNotMatch(code, /id: "dashboard"/);
     assert.match(code, /Phones/);
     assert.match(code, /Bridges/);
     assert.match(code, /Logs/);
     assert.match(code, /id: "logs"[\s\S]*label: "Logs"/);
     assert.match(code, /id: "bridges"[\s\S]*id: "logs"[\s\S]*id: "settings"/);
     assert.match(code, /MAC address/);
-    assert.match(code, /disabled=\{!valid \|\| saving \|\| \(!editing && \(!phoneAdminPasswordConfigured \|\| !outboundVoiceProfileConfigured\)\)\}/);
+    assert.match(code, /disabled=\{!draftValid \|\| saving \|\| \(!selectedPhone && \(!hardphoneConfig\.phoneAdminPasswordConfigured \|\| !hardphoneConfig\.outboundVoiceProfileConfigured\)\)\}/);
     assert.match(code, /phoneDraftValid/);
     assert.match(code, /PHONE_MODEL_CATALOG/);
     assert.match(code, /PhoneModelPreview/);
@@ -409,10 +438,10 @@ describe("hard phones provisioning (Phase 1)", () => {
 
   });
 
-  it("bundles exact manufacturer phone photos for catalog models", async () => {
+  it("bundles exact model artwork without the replaced inventory photos", async () => {
     const base = new URL("..", import.meta.url).pathname;
     const files = readdirSync(`${base}public/images/hardphones`).filter((name) => /\.(png|jpe?g|webp)$/i.test(name));
-    const page = await src("app/(portal)/admin/phones-provisioning/page.jsx");
+    const page = await src("lib/hardphones/model-catalog.mjs");
 
     [
       "yealink-t31p.png",
@@ -425,15 +454,19 @@ describe("hard phones provisioning (Phase 1)", () => {
       "yealink-t57w.png",
       "yealink-t58w.png",
       "audiocodes-405hd.png",
-      "audiocodes-420hd.png",
       "audiocodes-425hd.png",
       "audiocodes-430hd.png",
       "audiocodes-c430hd.png",
-      "audiocodes-440hd.png",
       "audiocodes-445hd.png",
       "audiocodes-450hd.png",
       "audiocodes-c450hd.png",
     ].forEach((file) => assert.ok(files.includes(file), `missing ${file}`));
+
+    const studio = readdirSync(`${base}public/images/hardphones/studio-v2/source`);
+    for (const file of ["audiocodes-420hd.png", "audiocodes-440hd.png", "poly-vvx-300.png", "yealink-t22p.png"]) {
+      assert.ok(studio.includes(file), `missing studio artwork ${file}`);
+      assert.ok(!files.includes(file), `obsolete photograph ${file}`);
+    }
 
     assert.match(page, /T54W[\s\S]*yealink-t54w\.png/);
     assert.match(page, /T57W[\s\S]*yealink-t57w\.png/);

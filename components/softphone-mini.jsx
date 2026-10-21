@@ -1,7 +1,11 @@
 "use client";
+import NativeSoftphone from "@/components/telephony/NativeSoftphone";
+import { usePhoneChoice } from "@/components/telephony/use-phone-choice";
+import { MiniPhoneSurface } from "@/components/telephony/PhoneSurface";
 import { useUiText } from "@/components/i18n/use-ui-text";
 
 
+import { prepareWebrtcAudio } from "@/lib/headsets/client-headset-service";
 import { voiceFetch } from "@/lib/telephony/endpoint-client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTelnyx } from "@/components/telephony-provider";
@@ -19,27 +23,16 @@ import {
   lookupCustomerName,
   getStoredCallerInfo,
 } from "@/lib/helpers/lookup-call-info";
-import {
-  Phone as IconPhone,
-  Mic as IconMic,
-  MicOff as IconMicOff,
-  Pause as IconPause,
-  Play as IconPlay,
-  ChevronDown as IconChevronDown,
-  PhoneOff as IconPhoneOff,
-  PhoneForwarded as IconPhoneForwarded,
-  UserCircle as IconContact,
-} from "lucide-react";
 import { TransferModal } from "@/components/contact-center/TransferModal";
 import { HandoffMoveButton } from "@/components/contact-center/handoff/HandoffEntry";
 import useDeviceHandoffStore from "@/lib/stores/device-handoff-store";
 import { NumberSelectionModal } from "@/components/contact-center/NumberSelectionModal";
 import { VoiceRecoveryBadge } from "@/components/voice-recovery-badge";
 import { HeadsetStatusBadge } from "@/components/headsets/HeadsetStatusBadge";
-import { HEADSET_COMMANDS } from "@/lib/headsets/headset-control-service.mjs";
-import { getHeadsetControlService, initHeadsetControlService } from "@/lib/headsets/client-headset-service";
-import { useExperimentalFeatures } from "@/lib/experimental-features-client";
-import { submitCoreHoldIntent } from "@/lib/acd/client-hold-intent";
+import { createHeadsetCommandController, headsetCallInProgress } from "@/lib/headsets/call-controller.mjs";
+import { callStateActions } from "@/lib/headsets/client-call-actions";
+import { useHeadsetAccess } from "@/lib/headsets/use-headset-access";
+import { getHeadsetControlService, startHeadsetSession, isHeadsetIntegrationEnabled, getHeadsetAudioRouter, setHeadsetAudioClient, refreshHeadsetAudioDevices } from "@/lib/headsets/client-headset-service";
 import { notify } from "@/components/ToastNotify";
 import { interactionCallControls,matchesInteractionCall,voiceInteractionPhase } from "@/lib/telephony/interaction-controls.mjs";
 import {
@@ -84,14 +77,22 @@ function isValidSipUri(input) {
 function isValidDialTo(value) {
   const v = String(value || "").trim();
   if (!v) return false;
-  return isValidE164(v) || isValidSipUri(v);
+  return /^[1-9]\d{2,4}$/.test(v) || isValidE164(v) || isValidSipUri(v);
 }
 
 export default function SoftphoneMini() {
+  const choice = usePhoneChoice();
+  return ["deskphone", "sip"].includes(choice?.kind) ? <NativeSoftphone mini /> : <WebrtcSoftphoneMini />;
+}
+
+function WebrtcSoftphoneMini() {
   const tUi = useUiText();
   const { client, status: telephonyStatus } = useTelnyx();
   const { toggle } = usePhoneUi();
-  const { enabled: experimentalFeaturesEnabled } = useExperimentalFeatures();
+  const headsetAccess = useHeadsetAccess();
+  const headsetEnabled = headsetAccess.enabled && isHeadsetIntegrationEnabled();
+  const headsetVendorsKey = headsetAccess.vendors.join(",");
+  const [headsetRetry, setHeadsetRetry] = useState(0);
 
   // Zustand stores - call state
   const activeCall = useActiveCall();
@@ -99,6 +100,7 @@ export default function SoftphoneMini() {
   const callerInfo = useCallerInfo();
   const callUI = useCallUI();
   const callStatus = useActiveCallStore((state) => state.status);
+  const headsetHasCall = headsetCallInProgress(activeCall, callStatus);
   const activeCallDirection = useActiveCallStore((state) => state.direction);
   const testInteractionId = useActiveCallStore((state) => state.contactCenter?.interactionId);
   const recoveredCallHeaders = useActiveCallStore((state) => state.recoveredCallHeaders);
@@ -147,7 +149,6 @@ export default function SoftphoneMini() {
   const [showNumberModal, setShowNumberModal] = useState(false);
   const [interaction, setInteraction] = useState(null);
   const [outboundCallerName, setOutboundCallerName] = useState("");
-  const headsetStatePublishVersionRef = useRef(0);
   const headsetCommandHandlersRef = useRef({});
   const formatCallerIdentity = (name, number) => {
     const normalizedName = String(name || "").trim();
@@ -179,6 +180,8 @@ export default function SoftphoneMini() {
     hangup,
     mute: toggleMute,
     hold: toggleHold,
+    setMuted: callStateActions.setMuted,
+    setHeld: callStateActions.setHeld,
     transfer: target=>{setCardTransferInteraction(target);setShowTransfer(true);},
   };
 
@@ -195,86 +198,51 @@ export default function SoftphoneMini() {
   },[activeCall,callStatus,testInteractionId,cardTransferInteraction]);
 
   useEffect(() => {
-    if (!experimentalFeaturesEnabled) return;
-    const service = getHeadsetControlService();
-    if (!service) return;
-
-    const publishVersion = headsetStatePublishVersionRef.current + 1;
-    headsetStatePublishVersionRef.current = publishVersion;
-    let isStale = false;
-
-    const callId =
-      activeCall?.callControlId ||
-      activeCall?.call_control_id ||
-      activeCall?.id ||
-      null;
-
-    initHeadsetControlService()
-      .then((initializedService) => {
-        if (isStale || headsetStatePublishVersionRef.current !== publishVersion) return null;
-        return initializedService?.setSoftphoneState({
-          callId,
-          direction: isIncomingCall ? "incoming" : isOutboundCall ? "outgoing" : null,
-          ringing: Boolean(isRinging),
-          active: Boolean(isCallConnected),
-          muted: Boolean(callUI.isMuted),
-          held: Boolean(callUI.isHeld),
-          remoteDisplayName: incomingFromName || outboundCallerName || null,
-          remoteNumber: incomingFromNumber || toNumber || null,
-        });
-      })
-      .catch(() => {});
-
-    return () => {
-      isStale = true;
-    };
-  }, [
-    activeCall,
-    callUI.isHeld,
-    callUI.isMuted,
-    incomingFromName,
-    incomingFromNumber,
-    isCallConnected,
-    isIncomingCall,
-    isOutboundCall,
-    isRinging,
-    outboundCallerName,
-    toNumber,
-    experimentalFeaturesEnabled,
-  ]);
+    const retry = () => setHeadsetRetry(value => value + 1);
+    window.addEventListener("headsets:retry", retry);
+    return () => window.removeEventListener("headsets:retry", retry);
+  }, []);
 
   useEffect(() => {
-    if (!experimentalFeaturesEnabled) return;
+    if (!headsetEnabled) return;
+    const stop = startHeadsetSession({ vendors: headsetVendorsKey.split(",").filter(Boolean), ownerId: headsetAccess.userId });
     const service = getHeadsetControlService();
-    if (!service) return;
-
-    return service.onCommand((command) => {
-      const current = useActiveCallStore.getState();
-      const handlers = headsetCommandHandlersRef.current;
-      if (command.type === HEADSET_COMMANDS.ANSWER && current.ui.isRinging) {
-        handlers.answer?.();
-        return;
-      }
-      if (command.type === HEADSET_COMMANDS.REJECT && current.ui.isRinging) {
-        handlers.reject?.();
-        return;
-      }
-      if (command.type === HEADSET_COMMANDS.HANGUP && current.call) {
-        handlers.hangup?.();
-        return;
-      }
-      if (command.type === HEADSET_COMMANDS.MUTE && current.call && command.muted !== current.ui.isMuted) {
-        handlers.mute?.();
-        return;
-      }
-      if (command.type === HEADSET_COMMANDS.HOLD && current.call && command.held !== current.ui.isHeld) {
-        handlers.hold?.();
-      }
+    const controller = createHeadsetCommandController({
+      getState: useActiveCallStore.getState, getHandlers: () => headsetCommandHandlersRef.current,
+      isCurrent: command => service.isCurrentCommand(command),
+      onError: error => notify({ title: "Headset control failed", description: error.message, variant: "error" }),
     });
-  }, [experimentalFeaturesEnabled]);
+    const off = service.onCommand(command => controller.execute(command));
+    return () => { off(); stop(); };
+  }, [headsetEnabled, headsetVendorsKey, headsetAccess.userId, headsetRetry]);
+
+  useEffect(() => {
+    if (!headsetEnabled) return;
+    void getHeadsetControlService()?.setSoftphoneState(headsetHasCall ? {
+      callId: activeCall?.callControlId || activeCall?.call_control_id || activeCall?.id || null,
+      direction: isIncomingCall ? "incoming" : isOutboundCall ? "outgoing" : null,
+      ringing: Boolean(isIncomingCall && isRinging), active: Boolean(isCallConnected),
+      muted: Boolean(callUI.isMuted), held: Boolean(callUI.isHeld),
+    } : {});
+  }, [activeCall, headsetHasCall, callUI.isHeld, callUI.isMuted, isCallConnected, isIncomingCall, isOutboundCall, isRinging, headsetEnabled, headsetVendorsKey, headsetAccess.userId, headsetRetry]);
 
   const fromRef = useRef("");
   const audioRef = useRef(null);
+  useEffect(() => {
+    setHeadsetAudioClient(client);
+    const router = getHeadsetAudioRouter();
+    const unregister = router?.registerElement(audioRef.current);
+    let disposed = false;
+    void refreshHeadsetAudioDevices().then(() => { if (!disposed) void router?.applyToCall(); });
+    const changed = () => { void refreshHeadsetAudioDevices(); };
+    navigator.mediaDevices?.addEventListener("devicechange", changed);
+    return () => { disposed = true; unregister?.(); navigator.mediaDevices?.removeEventListener("devicechange", changed); };
+  }, [client, activeCall, isCallConnected]);
+  useEffect(() => {
+    const attach = event => attachAudio(event.detail?.call || useActiveCallStore.getState().call);
+    window.addEventListener("softphone:attach-audio", attach);
+    return () => window.removeEventListener("softphone:attach-audio", attach);
+  });
   // Fetch interaction when call is active
   // This works for BOTH contact center calls AND by looking up any incoming call
   // Track the last interaction we fetched to prevent repeated API calls
@@ -761,7 +729,7 @@ export default function SoftphoneMini() {
     const el = audioRef.current;
     if (el) {
       try {
-        el.muted = false;
+        el.muted = Boolean(getHeadsetAudioRouter()?.getSnapshot().outputBlocked);
         el.autoplay = true;
         el.playsInline = true;
         el.volume = 1.0;
@@ -849,7 +817,7 @@ export default function SoftphoneMini() {
       if (useActiveCallStore.getState().call !== call) return;
 
       // Ensure audio element is properly configured
-      el.muted = false;
+      el.muted = Boolean(getHeadsetAudioRouter()?.getSnapshot().outputBlocked);
       el.autoplay = true;
       el.playsInline = true;
       el.volume = 1.0;
@@ -1290,26 +1258,30 @@ export default function SoftphoneMini() {
     }
 
     let directIntentId = null;
+    let callAudio = null;
     try {
       // Ensure mic is available
       try {
         client.enableMicrophone?.();
       } catch (_) {}
 
+      callAudio = await prepareWebrtcAudio();
       const experimentalOptions = getWebrtcExperimentalOptions();
       console.log("[webrtc] Starting outbound call", experimentalOptions);
       const prepared = await voiceFetch("/api/voice/direct-intent", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ requestId: crypto.randomUUID(), target: to }),
+        body: JSON.stringify({ requestId: crypto.randomUUID(), target: to, outboundIdentity: useDialStore.getState().outboundIdentity }),
       });
       const directIntent = await prepared.json();
       if (!prepared.ok) throw new Error(directIntent.error || "Voice capacity unavailable");
       directIntentId = directIntent.intentId || null;
+      from = directIntent.callerNumber || from;
       const call = client.newCall({
-        destinationNumber: to,
+        destinationNumber: directIntent.destination || to,
         callerNumber: from || undefined,
         callerName: callerName || undefined,
         audio: true,
+        localStream: callAudio,
         video: false,
         customHeaders: [...(overrides.customHeaders || []), ...directIntent.customHeaders],
         ...(experimentalOptions.prefetchIceCandidates && {
@@ -1361,6 +1333,7 @@ export default function SoftphoneMini() {
         }, delay);
       });
     } catch (err) {
+      callAudio?.getTracks().forEach(track => track.stop());
       if (directIntentId) void cancelUnstartedWebrtcIntent(directIntentId);
       notify({
         title: "Call failed",
@@ -1385,51 +1358,13 @@ export default function SoftphoneMini() {
   }, [client, activeCall, toNumber, outboundCallerName]);
 
   async function toggleMute() {
-    try {
-      if (!activeCall) return;
-
-      const isMuted = callUI.isMuted;
-
-      if (!isMuted) {
-        const mute = activeCall.muteAudio || activeCall.mute;
-        await mute?.call(activeCall);
-        storeSetMuted(true);
-      } else {
-        const unmute = activeCall.unmuteAudio || activeCall.unmute;
-        await unmute?.call(activeCall);
-        storeSetMuted(false);
-      }
-    } catch (err) {
-      // Toggle mute error
-    }
+    try { await callStateActions.setMuted(!useActiveCallStore.getState().ui.isMuted); }
+    catch (err) { notify({ title: "Mute failed", description: err.message, variant: "error" }); }
   }
 
   async function toggleHold() {
-    try {
-      if (!activeCall) return;
-
-      const isHeld = callUI.isHeld;
-
-      if (isHeld) {
-        const resume = activeCall.unhold || activeCall.resume;
-        await resume?.call(activeCall);
-        // Update status before clearing held state so resume metrics close the hold interval
-        updateStatus("active");
-        storeSetHeld(false);
-        const workItemId = useActiveCallStore.getState().contactCenter?.interactionId;
-        if (workItemId) await submitCoreHoldIntent(workItemId, "unhold");
-      } else {
-        const hold = activeCall.hold || activeCall.pause;
-        await hold?.call(activeCall);
-        storeSetHeld(true);
-        // Update status to 'held' to track hold start
-        updateStatus("held");
-        const workItemId = useActiveCallStore.getState().contactCenter?.interactionId;
-        if (workItemId) await submitCoreHoldIntent(workItemId, "hold");
-      }
-    } catch (err) {
-      // Toggle hold error
-    }
+    try { await callStateActions.setHeld(!useActiveCallStore.getState().ui.isHeld); }
+    catch (err) { notify({ title: "Hold failed", description: err.message, variant: "error" }); }
   }
 
   // "Answer here" in the Move call dialog: the mini phone owns the call's audio, so it answers.
@@ -1442,7 +1377,7 @@ export default function SoftphoneMini() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [answerRequest]);
 
-  function handleAnswerCall() {
+  async function handleAnswerCall() {
     try {
       if (!activeCall) {
         return;
@@ -1452,7 +1387,9 @@ export default function SoftphoneMini() {
       attachAudio(activeCall);
 
       // Answer the call
-      activeCall.answer?.();
+      if (typeof activeCall.answer !== "function") throw new Error("This call cannot be answered.");
+      await activeCall.answer();
+      if (useActiveCallStore.getState().call !== activeCall) return;
 
       // The WebRTC leg is already the agent leg created by the routing engine.
       // Do not call the interaction /answer endpoint here: that endpoint is for
@@ -1471,7 +1408,8 @@ export default function SoftphoneMini() {
         }, delay);
       });
     } catch (err) {
-      // Error answering call
+      notify({ title: "Answer failed", description: err.message, variant: "error" });
+      return false;
     }
   }
 
@@ -1506,7 +1444,9 @@ export default function SoftphoneMini() {
         );
       }
 
-      activeCall.hangup?.();
+      if (typeof activeCall.hangup !== "function") throw new Error("This call cannot be rejected.");
+      await activeCall.hangup();
+      if (useActiveCallStore.getState().call && useActiveCallStore.getState().call !== activeCall) return;
       clearActiveCall();
       if (callControlId) {
         useCallsStore.getState().removeCall(callControlId);
@@ -1518,12 +1458,12 @@ export default function SoftphoneMini() {
         new CustomEvent("contact-center:refresh-interactions")
       );
     } catch (err) {
-      // Error rejecting call
-      clearActiveCall();
+      notify({ title: "Reject failed", description: err.message, variant: "error" });
+      return false;
     }
   }
 
-  function hangup() {
+  async function hangup() {
     // Check if this is a contact center call and trigger wrapup sheet
     const storeState = useActiveCallStore.getState();
     const interactionId = storeState?.contactCenter?.interactionId;
@@ -1591,7 +1531,7 @@ export default function SoftphoneMini() {
       // Try to hangup
       try {
         if (typeof activeCall.hangup === "function") {
-          activeCall.hangup();
+          await activeCall.hangup();
 
           // The telnyx.notification handler will receive the call end notification
           // and call handleCallEnd(). Add a fallback timeout just in case.
@@ -1619,8 +1559,8 @@ export default function SoftphoneMini() {
           return;
         }
       } catch (err) {
-        // Clear state even if hangup fails
-        handleCallEnd();
+        notify({ title: "Hangup failed", description: err.message, variant: "error" });
+        return false;
       }
     } catch (err) {
       // Clear state on any error
@@ -1643,161 +1583,10 @@ export default function SoftphoneMini() {
   }
 
   return (
-    <div
-      data-testid="voice-softphone"
-      data-voice-ready={telephonyStatus === "connected" ? "true" : "false"}
-      data-call-status={callStatus || "idle"}
-      data-rtc-call-id={activeCall?.id || ""}
-      data-work-item-id={callHeader("x-cc-work-item-id")}
-      data-offer-generation={callHeader("x-cc-offer-generation")}
-      data-interaction-id={testInteractionId || ""}
-      data-call-control-id={activeCall?.callControlId || activeCall?.call_control_id || ""}
-      data-held={callUI.isHeld ? "true" : "false"}
-      data-muted={callUI.isMuted ? "true" : "false"}
-      className={`hidden sm:flex items-center gap-2 rounded-md bg-muted text-foreground border px-2 py-1 transition-all ${
-        isRinging
-          ? "border-telnyx-green shadow-[0_0_0_2px_rgba(34,211,110,0.3)] animate-pulse"
-          : "border-border"
-      }`}
+    <MiniPhoneSurface telephonyStatus={telephonyStatus} callStatus={callStatus} activeCall={activeCall} callHeader={callHeader} testInteractionId={testInteractionId} callUI={callUI} isRinging={isRinging} audioRef={audioRef} isIncomingCall={isIncomingCall} incomingCallerDisplay={incomingCallerDisplay} isOutboundCall={isOutboundCall} miniInputDisplay={miniInputDisplay} shouldMarqueeMiniInput={shouldMarqueeMiniInput} setShowNumberModal={setShowNumberModal} handleRejectCall={handleRejectCall} handleAnswerCall={handleAnswerCall} isCallConnected={isCallConnected} hangup={hangup} toggleMute={toggleMute} toggleHold={toggleHold} canCall={canCall} startCall={startCall} toggle={toggle}
+      connectionIndicator={<VoiceRecoveryBadge promptForDevice />} headsetIndicator={headsetEnabled ? <HeadsetStatusBadge /> : null}
+      onTransfer={() => {setCardTransferInteraction(null);setShowTransfer(true);}} handoffButton={<HandoffMoveButton callInteractionId={useActiveCallStore.getState().contactCenter?.interactionId ?? null} />}
     >
-      <audio data-testid="voice-remote-audio" ref={audioRef} autoPlay playsInline className="hidden" />
-      <VoiceRecoveryBadge promptForDevice />
-      {experimentalFeaturesEnabled ? <HeadsetStatusBadge /> : null}
-      <button
-        className="h-7 w-7 rounded-full grid place-items-center bg-zinc-700/70 text-white hover:bg-zinc-700"
-        data-testid="voice-number-select" title={tUi("Select number from contacts")}
-        onClick={() => setShowNumberModal(true)}
-      >
-        <IconContact className="h-4 w-4" />
-      </button>
-      <button
-        type="button"
-        disabled={Boolean(isIncomingCall && incomingCallerDisplay)}
-        className={`relative h-[30px] w-40 overflow-hidden rounded border bg-background px-2 py-1 text-left text-xs outline-none ${
-          isIncomingCall && incomingCallerDisplay
-            ? "cursor-not-allowed border-orange-500/50 text-orange-500"
-            : isOutboundCall
-            ? "cursor-pointer border-emerald-500/50 text-foreground"
-            : "cursor-pointer border-border text-foreground"
-        }`}
-        onClick={() => {
-          if (!(isIncomingCall && incomingCallerDisplay)) {
-            setShowNumberModal(true);
-          }
-        }}
-        title={isIncomingCall && incomingCallerDisplay ? tUi("From: {value0}", { value0: incomingCallerDisplay }) : tUi("Click to select number")}
-      >
-        <span
-          className={shouldMarqueeMiniInput ? "inline-block whitespace-nowrap" : "block truncate"}
-          style={
-            shouldMarqueeMiniInput
-              ? { animation: "miniPhoneCallerMarquee 6s ease-in-out infinite alternate" }
-              : undefined
-          }
-        >
-          {miniInputDisplay || tUi("Phone number or SIP URI")}
-        </span>
-      </button>
-      <style jsx global>{`
-        @keyframes miniPhoneCallerMarquee {
-          0%, 25% { transform: translateX(0); }
-          75%, 100% { transform: translateX(calc(-100% + 9rem)); }
-        }
-      `}</style>
-      {/* Show answer/reject buttons for incoming ringing calls */}
-      {isRinging ? (
-        <>
-          <button
-            className="h-7 w-7 rounded-full grid place-items-center bg-red-600 text-white"
-            data-testid="voice-reject" title={tUi("Reject")}
-            onClick={() => handleRejectCall()}
-          >
-            <IconPhoneOff className="h-4 w-4" />
-          </button>
-          <button
-            className="h-7 w-7 rounded-full grid place-items-center bg-emerald-600 text-white"
-            data-testid="voice-answer" title={tUi("Answer")}
-            onClick={() => handleAnswerCall()}
-          >
-            <IconPhone className="h-4 w-4" />
-          </button>
-        </>
-      ) : activeCall && !isCallConnected ? (
-        <>
-          {/* Show only disconnect button for outbound calls in progress (dialing/ringing) */}
-          <button
-            className="h-7 w-7 rounded-full grid place-items-center bg-red-600 text-white"
-            data-testid="voice-disconnect" title={tUi("Disconnect")}
-            onClick={hangup}
-          >
-            <IconPhoneOff className="h-4 w-4" />
-          </button>
-        </>
-      ) : isCallConnected ? (
-        <>
-          {/* Show CTI buttons when call is connected/answered */}
-          <button
-            className="h-7 w-7 rounded-full grid place-items-center bg-zinc-700/70 text-white"
-            data-testid="voice-mute" title={callUI.isMuted ? tUi("Unmute") : tUi("Mute")}
-            onClick={toggleMute}
-          >
-            {callUI.isMuted ? (
-              <IconMicOff className="h-4 w-4" />
-            ) : (
-              <IconMic className="h-4 w-4" />
-            )}
-          </button>
-          <button
-            className="h-7 w-7 rounded-full grid place-items-center bg-red-600 text-white"
-            data-testid="voice-hangup" title={tUi("Hang up")}
-            onClick={hangup}
-          >
-            <IconPhoneOff className="h-4 w-4" />
-          </button>
-          <button
-            className="h-7 w-7 rounded-full grid place-items-center bg-zinc-700/70 text-white"
-            data-testid="voice-hold" title={callUI.isHeld ? tUi("Unhold") : tUi("Hold", undefined, "phone action")}
-            onClick={toggleHold}
-          >
-            {callUI.isHeld ? (
-              <IconPlay className="h-4 w-4" />
-            ) : (
-              <IconPause className="h-4 w-4" />
-            )}
-          </button>
-          <button
-            className="h-7 w-7 rounded-full grid place-items-center bg-zinc-700/70 text-white"
-            data-testid="voice-transfer" title={tUi("Transfer")}
-            onClick={() => {setCardTransferInteraction(null);setShowTransfer(true);}}
-          >
-            <IconPhoneForwarded className="h-4 w-4" />
-          </button>
-          <HandoffMoveButton callInteractionId={useActiveCallStore.getState().contactCenter?.interactionId ?? null} />
-        </>
-      ) : (
-        <>
-          {/* Show only dial button when idle */}
-          <button
-            className={`h-7 w-7 rounded-full grid place-items-center ${
-              canCall
-                ? "bg-emerald-600 text-white"
-                : "bg-zinc-700/70 text-white/70"
-            }`}
-            data-testid="voice-dial" title={tUi("Call", undefined, "phone action")}
-            onClick={startCall}
-            disabled={!canCall}
-          >
-            <IconPhone className="h-4 w-4" />
-          </button>
-        </>
-      )}
-      <button
-        className="ml-1 h-7 w-7 rounded-full bg-zinc-700/70 text-white grid place-items-center"
-        data-testid="voice-expand" title={tUi("Show phone")}
-        onClick={toggle}
-      >
-        <IconChevronDown className="h-4 w-4" />
-      </button>
       {/* TransferModal must stay mounted during consult process even when activeCall is null
           (because consult hangs up original call before initiating new WebRTC call) */}
       <TransferModal
@@ -1828,6 +1617,6 @@ export default function SoftphoneMini() {
           setShowNumberModal(false);
         }}
       />
-    </div>
+    </MiniPhoneSurface>
   );
 }

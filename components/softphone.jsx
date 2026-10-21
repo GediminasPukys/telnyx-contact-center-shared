@@ -1,9 +1,12 @@
 "use client";
+import NativeSoftphone from "@/components/telephony/NativeSoftphone";
+import { usePhoneChoice } from "@/components/telephony/use-phone-choice";
+import { FloatingPhoneSurface } from "@/components/telephony/PhoneSurface";
 import { useUiText } from "@/components/i18n/use-ui-text";
 
+import { prepareWebrtcAudio } from "@/lib/headsets/client-headset-service";
 import { voiceFetch } from "@/lib/telephony/endpoint-client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import clsx from "clsx";
 import { useTelnyx } from "@/components/telephony-provider";
 import { playDtmfBeep } from "@/lib/dtmf";
 import useActiveCallStore, {
@@ -13,24 +16,11 @@ import useActiveCallStore, {
 } from "@/lib/stores/active-call-store";
 import useDialStore from "@/lib/stores/dial-store";
 import useCallsStore from "@/lib/stores/calls-store";
-import {
-  Phone as IconPhone,
-  PhoneOff as IconPhoneOff,
-  Volume2 as IconSpeaker,
-  Mic as IconMic,
-  MicOff as IconMicOff,
-  Hash as IconHash,
-  ChevronDown as IconChevronDown,
-  Pause as IconPause,
-  Play as IconPlay,
-  UserCircle as IconContact,
-  PhoneForwarded as IconPhoneForwarded,
-} from "lucide-react";
 import { NumberSelectionModal } from "@/components/contact-center/NumberSelectionModal";
 import { TransferModal } from "@/components/contact-center/TransferModal";
 import { HandoffEntryBar } from "@/components/contact-center/handoff/HandoffEntry";
 import { notify } from "@/components/ToastNotify";
-import { submitCoreHoldIntent } from "@/lib/acd/client-hold-intent";
+import { callStateActions } from "@/lib/headsets/client-call-actions";
 import {
   cancelUnstartedWebrtcIntent,
   claimWebrtcDialFailure,
@@ -64,25 +54,6 @@ const getWebrtcExperimentalOptions = () => ({
   ),
 });
 
-function CircleButton({ children, onClick, disabled, className, title }) {
-  return (
-    <button
-      type="button"
-      title={title}
-      className={clsx(
-        "h-12 w-12 rounded-full flex items-center justify-center text-white",
-        "shadow-md active:scale-[0.98] transition-transform",
-        disabled && "opacity-50 cursor-not-allowed",
-        className
-      )}
-      onClick={onClick}
-      disabled={disabled}
-    >
-      {children}
-    </button>
-  );
-}
-
 function isValidE164(number) {
   return /^\+?[1-9]\d{6,14}$/.test(String(number || "").trim());
 }
@@ -92,16 +63,20 @@ function isValidSipUri(input) {
 function isValidDialTo(value) {
   const v = String(value || "").trim();
   if (!v) return false;
-  return isValidE164(v) || isValidSipUri(v);
+  return /^[1-9]\d{2,4}$/.test(v) || isValidE164(v) || isValidSipUri(v);
 }
 
 export function Softphone() {
+  const choice = usePhoneChoice();
+  return ["deskphone", "sip"].includes(choice?.kind) ? <NativeSoftphone /> : <WebrtcSoftphone />;
+}
+
+function WebrtcSoftphone() {
   const tUi = useUiText();
-  const { client, region, regions, setRegion } = useTelnyx();
+  const { client } = useTelnyx();
 
   // Zustand stores - call state (shared with mini phone)
   const activeCall = useActiveCall();
-  const hasActiveCall = Boolean(activeCall);
   const isRinging = useIsRinging();
   const callUI = useCallUI();
   const callStatus = useActiveCallStore((state) => state.status);
@@ -152,13 +127,6 @@ export function Softphone() {
 
   // Local UI state
   const [dtmfBuffer, setDtmfBuffer] = useState("");
-  const [audioInputs, setAudioInputs] = useState([]);
-  const [audioOutputs, setAudioOutputs] = useState([]);
-  const [selectedMicId, setSelectedMicId] = useState("");
-  const [selectedSpeakerId, setSelectedSpeakerId] = useState("");
-  const [showMicList, setShowMicList] = useState(false);
-  const [showSpkList, setShowSpkList] = useState(false);
-  const [showRegionList, setShowRegionList] = useState(false);
   const [showDtmf, setShowDtmf] = useState(false);
   const [showNumberModal, setShowNumberModal] = useState(false);
   const [showTransfer, setShowTransfer] = useState(false);
@@ -189,14 +157,7 @@ export function Softphone() {
     ? incomingCallerDisplay || fromNumber
     : fromNumber;
 
-  const remoteAudioRef = useRef(null);
   const lastFetchedInteractionIdRef = useRef(null);
-
-  useEffect(() => {
-    if (hasActiveCall) {
-      setShowRegionList(false);
-    }
-  }, [hasActiveCall]);
 
   const copySipUri = async () => {
     if (!sipUri) {
@@ -264,40 +225,10 @@ export function Softphone() {
   // Pass the call explicitly when it may be newer than this render's activeCall
   // (e.g. a consult leg created by TransferModal).
   const hydrateRemoteAudio = useCallback((targetCall) => {
-    try {
-      const call = targetCall || activeCall;
-      const audioEl = remoteAudioRef.current;
-      if (!call || !audioEl) return;
-      if (useActiveCallStore.getState().call !== call) return;
-      const possibleStream =
-        call.remoteStream || call.remoteMediaStream || call.stream;
-      if (possibleStream && audioEl.srcObject !== possibleStream) {
-        audioEl.srcObject = possibleStream;
-        try {
-          audioEl.play?.();
-        } catch (_) {}
-      }
-      if (typeof call.setAudioElement === "function" && audioEl) {
-        try {
-          call.setAudioElement(audioEl);
-          try {
-            audioEl.play?.();
-          } catch (_) {}
-        } catch (_) {}
-      }
-    } catch (_) {}
-  }, [activeCall]);
+    window.dispatchEvent(new CustomEvent("softphone:attach-audio", { detail: { call: targetCall || useActiveCallStore.getState().call } }));
+  }, []);
 
-  // Re-attach audio whenever the call object changes
-  useEffect(() => {
-    if (activeCall) {
-      hydrateRemoteAudio();
-    } else {
-      try {
-        if (remoteAudioRef.current) remoteAudioRef.current.srcObject = null;
-      } catch (_) {}
-    }
-  }, [activeCall, hydrateRemoteAudio]);
+  useEffect(() => { if (activeCall) hydrateRemoteAudio(activeCall); }, [activeCall, hydrateRemoteAudio]);
 
   // Wire call events when activeCall changes (e.g., when set from TransferModal)
   // This ensures that calls set in the store from other components (like TransferModal) are properly wired
@@ -670,26 +601,30 @@ export function Softphone() {
     }
 
     let directIntentId = null;
+    let callAudio = null;
     try {
       try {
         client.enableMicrophone?.();
       } catch (_) {}
 
+      callAudio = await prepareWebrtcAudio();
       const experimentalOptions = getWebrtcExperimentalOptions();
       console.log("[webrtc] Starting outbound call", experimentalOptions);
       const prepared = await voiceFetch("/api/voice/direct-intent", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ requestId: crypto.randomUUID(), target: to }),
+        body: JSON.stringify({ requestId: crypto.randomUUID(), target: to, outboundIdentity: useDialStore.getState().outboundIdentity }),
       });
       const directIntent = await prepared.json();
       if (!prepared.ok) throw new Error(directIntent.error || "Voice capacity unavailable");
       directIntentId = directIntent.intentId || null;
+      from = directIntent.callerNumber || from;
       const call = client.newCall({
         customHeaders: directIntent.customHeaders,
-        destinationNumber: to,
+        destinationNumber: directIntent.destination || to,
         callerNumber: from || undefined,
         callerName: callerName || undefined,
         audio: true,
+        localStream: callAudio,
         video: false,
         ...(experimentalOptions.prefetchIceCandidates && {
           prefetchIceCandidates: true,
@@ -723,6 +658,7 @@ export function Softphone() {
       });
     } catch (err) {
       console.error("[Softphone] Failed to start call:", err);
+      callAudio?.getTracks().forEach(track => track.stop());
       if (directIntentId) void cancelUnstartedWebrtcIntent(directIntentId);
       notify({
         title: "Call failed",
@@ -876,51 +812,13 @@ export function Softphone() {
   }
 
   async function toggleMute() {
-    try {
-      if (!activeCall) return;
-
-      const isMuted = callUI.isMuted;
-
-      if (!isMuted) {
-        const mute = activeCall.muteAudio || activeCall.mute;
-        await mute?.call(activeCall);
-        storeSetMuted(true);
-      } else {
-        const unmute = activeCall.unmuteAudio || activeCall.unmute;
-        await unmute?.call(activeCall);
-        storeSetMuted(false);
-      }
-    } catch (err) {
-      console.error("[Softphone] Toggle mute error:", err);
-    }
+    try { await callStateActions.setMuted(!useActiveCallStore.getState().ui.isMuted); }
+    catch (error) { notify({ title: "Mute failed", description: error.message, variant: "error" }); }
   }
 
   async function toggleHold() {
-    try {
-      if (!activeCall) return;
-
-      const isHeld = callUI.isHeld;
-
-      if (isHeld) {
-        const resume = activeCall.unhold || activeCall.resume;
-        await resume?.call(activeCall);
-        // Update status before clearing held state so resume metrics close the hold interval
-        updateStatus("active");
-        storeSetHeld(false);
-        const workItemId = useActiveCallStore.getState().contactCenter?.interactionId;
-        if (workItemId) await submitCoreHoldIntent(workItemId, "unhold");
-      } else {
-        const hold = activeCall.hold || activeCall.pause;
-        await hold?.call(activeCall);
-        storeSetHeld(true);
-        // Update status to 'held' to track hold start
-        updateStatus("held");
-        const workItemId = useActiveCallStore.getState().contactCenter?.interactionId;
-        if (workItemId) await submitCoreHoldIntent(workItemId, "hold");
-      }
-    } catch (err) {
-      console.error("[Softphone] Toggle hold error:", err);
-    }
+    try { await callStateActions.setHeld(!useActiveCallStore.getState().ui.isHeld); }
+    catch (error) { notify({ title: "Hold failed", description: error.message, variant: "error" }); }
   }
 
   function handleAnswerCall() {
@@ -1174,422 +1072,10 @@ export function Softphone() {
     []
   );
 
-  const refreshDevices = useCallback(async () => {
-    try {
-      if (!navigator?.mediaDevices?.enumerateDevices) return;
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const ins = devices.filter((d) => d.kind === "audioinput");
-      const outs = devices.filter((d) => d.kind === "audiooutput");
-      setAudioInputs(ins);
-      setAudioOutputs(outs);
-      if (!selectedMicId && ins[0]?.deviceId) setSelectedMicId(ins[0].deviceId);
-      if (!selectedSpeakerId && outs[0]?.deviceId)
-        setSelectedSpeakerId(outs[0].deviceId);
-    } catch (_) {}
-  }, [selectedMicId, selectedSpeakerId]);
-
-  useEffect(() => {
-    refreshDevices();
-    const onDeviceChange = () => refreshDevices();
-    try {
-      navigator.mediaDevices?.addEventListener?.(
-        "devicechange",
-        onDeviceChange
-      );
-    } catch (_) {}
-    return () => {
-      try {
-        navigator.mediaDevices?.removeEventListener?.(
-          "devicechange",
-          onDeviceChange
-        );
-      } catch (_) {}
-    };
-  }, [refreshDevices]);
-
-  const applyMicSelection = useCallback(
-    async (deviceId) => {
-      if (!deviceId || !client) return;
-      try {
-        if (typeof client.updateAudioConstraints === "function") {
-          await client.updateAudioConstraints({ deviceId });
-          return;
-        }
-      } catch (_) {}
-      try {
-        if (typeof client.setMicrophoneDevice === "function") {
-          await client.setMicrophoneDevice(deviceId);
-          return;
-        }
-      } catch (_) {}
-      try {
-        if (typeof client.setInputDevice === "function") {
-          await client.setInputDevice(deviceId);
-          return;
-        }
-      } catch (_) {}
-      try {
-        if (typeof client.enableMicrophone === "function") {
-          await client.enableMicrophone({ deviceId });
-          return;
-        }
-      } catch (_) {}
-    },
-    [client]
-  );
-
-  const applySpeakerSelection = useCallback(async (deviceId) => {
-    const audioEl = remoteAudioRef.current;
-    if (!audioEl || !deviceId) return;
-    try {
-      if (typeof audioEl.setSinkId === "function") {
-        await audioEl.setSinkId(deviceId);
-      }
-    } catch (_) {}
-  }, []);
-
-  useEffect(() => {
-    if (selectedMicId) applyMicSelection(selectedMicId);
-  }, [selectedMicId, applyMicSelection]);
-
-  useEffect(() => {
-    if (selectedSpeakerId) applySpeakerSelection(selectedSpeakerId);
-  }, [selectedSpeakerId, applySpeakerSelection]);
-
   return (
-    <div className="mx-auto w-full max-w-[280px] py-1 bg-zinc-900">
-      <audio ref={remoteAudioRef} autoPlay playsInline className="hidden" />
-      <div className="relative flex flex-col items-center gap-4 rounded-2xl bg-zinc-900 p-4 text-white shadow-xl">
-        {/* Device selectors */}
-        <div className="absolute left-3 top-3">
-          <div className="relative">
-            <button
-              className={clsx(
-                "flex min-w-[112px] items-center justify-between gap-1 rounded-md border border-zinc-700 bg-zinc-900/60 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-zinc-200 hover:bg-zinc-800",
-                hasActiveCall && "cursor-not-allowed opacity-50 hover:bg-zinc-900/60"
-              )}
-              onClick={() => {
-                if (hasActiveCall) return;
-                setShowRegionList((v) => !v);
-                setShowMicList(false);
-                setShowSpkList(false);
-              }}
-              disabled={hasActiveCall}
-              title={
-                hasActiveCall
-                  ? tUi("Cannot change WebRTC region during an active call")
-                  : tUi("Select WebRTC region")
-              }
-            >
-              <span>{regions.find((r) => r.value === region)?.label || tUi("AUTO")}</span>
-              <IconChevronDown className="h-3 w-3" />
-            </button>
-            {showRegionList && !hasActiveCall && (
-              <div className="absolute left-0 z-10 mt-2 w-36 rounded-md border border-zinc-700 bg-zinc-900 p-1 text-xs shadow-xl">
-                <div className="px-2 py-1 text-[11px] text-zinc-400">{tUi("WebRTC Region")}</div>
-                <div className="max-h-64 overflow-auto">
-                  {regions.map((option) => (
-                    <button
-                      key={option.value}
-                      onClick={() => {
-                        setRegion(option.value);
-                        setShowRegionList(false);
-                      }}
-                      className={clsx(
-                        "flex w-full items-center justify-between gap-2 rounded px-2 py-1 text-left hover:bg-zinc-800 text-[10px]",
-                        region === option.value && "bg-zinc-800"
-                      )}
-                    >
-                      <span className="truncate">{option.label}</span>
-                      {region === option.value && (
-                        <span className="text-emerald-400">✓</span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-        <div className="absolute right-3 top-3 flex items-center gap-2">
-          <div className="relative">
-            <button
-              className="flex items-center gap-1 rounded-md border border-zinc-700 bg-zinc-900/60 px-2 py-1 text-xs hover:bg-zinc-800"
-              onClick={() => {
-                setShowMicList((v) => !v);
-                setShowSpkList(false);
-                setShowRegionList(false);
-              }}
-              title={tUi("Select microphone")}
-            >
-              <IconMic className="h-4 w-4" />
-              <IconChevronDown className="h-3 w-3" />
-            </button>
-            {showMicList && (
-              <div className="absolute right-0 z-10 mt-2 w-50 rounded-md border border-zinc-700 bg-zinc-900 p-1 text-xs shadow-xl">
-                <div className="px-2 py-1 text-[11px] text-zinc-400">{tUi("Microphones")}</div>
-                <div className="max-h-64 overflow-auto">
-                  {audioInputs.map((d) => (
-                    <button
-                      key={d.deviceId}
-                      onClick={() => {
-                        setSelectedMicId(d.deviceId);
-                        setShowMicList(false);
-                      }}
-                      className={clsx(
-                        "flex w-full items-center gap-2 rounded px-2 py-1 text-left hover:bg-zinc-800 text-[10px]",
-                        selectedMicId === d.deviceId && "bg-zinc-800"
-                      )}
-                    >
-                      <span className="truncate">
-                        {d.label || tUi("Default microphone")}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-          <div className="relative">
-            <button
-              className="flex items-center gap-1 rounded-md border border-zinc-700 bg-zinc-900/60 px-2 py-1 text-xs hover:bg-zinc-800"
-              onClick={() => {
-                setShowSpkList((v) => !v);
-                setShowMicList(false);
-                setShowRegionList(false);
-              }}
-              title={tUi("Select speaker")}
-            >
-              <IconSpeaker className="h-4 w-4" />
-              <IconChevronDown className="h-3 w-3" />
-            </button>
-            {showSpkList && (
-              <div className="absolute right-0 z-10 mt-2 w-50 rounded-md border border-zinc-700 bg-zinc-900 p-1 text-xs shadow-xl">
-                <div className="px-2 py-1 text-zinc-400">{tUi("Speakers")}</div>
-                <div className="max-h-64 overflow-auto text-[6px]">
-                  {audioOutputs.map((d) => (
-                    <button
-                      key={d.deviceId}
-                      onClick={() => {
-                        setSelectedSpeakerId(d.deviceId);
-                        setShowSpkList(false);
-                      }}
-                      className={clsx(
-                        "flex w-full items-center gap-2 rounded px-2 py-1 text-left hover:bg-zinc-800 text-[10px]",
-                        selectedSpeakerId === d.deviceId && "bg-zinc-800"
-                      )}
-                    >
-                      <span className="truncate">
-                        {d.label || tUi("Default speakers")}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="w-full mt-8">
-          <label className="mb-1 block text-[11px] text-zinc-300">{tUi("To")}</label>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              className="h-8 w-8 rounded-lg border border-zinc-700 bg-zinc-900/60 text-white hover:bg-zinc-800 flex items-center justify-center"
-              title={tUi("Select number from contacts")}
-              onClick={() => setShowNumberModal(true)}
-            >
-              <IconContact className="h-4 w-4" />
-            </button>
-            <input
-              className="flex-1 rounded-lg border border-zinc-700 bg-zinc-900/60 px-2.5 py-1.5 text-[10px] text-white outline-none focus:border-zinc-500 cursor-pointer"
-              placeholder={tUi("Phone number or SIP URI")}
-              value={toNumber}
-              readOnly
-              onClick={() => setShowNumberModal(true)}
-              title={tUi("Click to select number")}
-              inputMode="text"
-            />
-          </div>
-        </div>
-
-        <div className="w-full">
-          <label className="mb-1 block text-[11px] text-zinc-300">{tUi("From")}</label>
-          <input
-            className={clsx(
-              "w-full rounded-lg border bg-zinc-900/60 px-2.5 py-1.5 text-[10px] outline-none cursor-not-allowed",
-              isIncomingCall
-                ? "border-orange-500/50 text-orange-500 focus:border-orange-500"
-                : isOutboundCall
-                ? "border-emerald-500/50 text-white focus:border-emerald-500"
-                : "border-zinc-700 text-white focus:border-zinc-500"
-            )}
-            placeholder={tUi("Phone number or SIP URI")}
-            value={displayedFromNumber || ""}
-            readOnly
-            title={isIncomingCall ? tUi("Incoming caller: {value0}", { value0: displayedFromNumber || "" }) : tUi("Voice number from your profile")}
-            inputMode="text"
-          />
-        </div>
-
-        {/* Show answer/reject buttons for incoming ringing calls */}
-        {isRinging ? (
-          <div className="mt-1 grid w-full grid-cols-2 place-items-center gap-4">
-            <div className="flex flex-col items-center gap-2">
-              <CircleButton
-                title={tUi("Reject")}
-                className="bg-red-600"
-                onClick={() => handleRejectCall()}
-              >
-                <IconPhoneOff className="h-5 w-5" />
-              </CircleButton>
-              <div className="text-[11px] text-zinc-300">{tUi("Reject")}</div>
-            </div>
-            <div className="flex flex-col items-center gap-2">
-              <CircleButton
-                title={tUi("Answer")}
-                className="bg-emerald-600"
-                onClick={() => handleAnswerCall()}
-              >
-                <IconPhone className="h-5 w-5" />
-              </CircleButton>
-              <div className="text-[11px] text-zinc-300">{tUi("Answer")}</div>
-            </div>
-          </div>
-        ) : activeCall && !isCallConnected ? (
-          /* Show only disconnect button for outbound calls in progress (dialing/ringing) */
-          <div className="mt-1 flex w-full justify-center">
-            <div className="flex flex-col items-center gap-2">
-              <CircleButton
-                title={tUi("Disconnect")}
-                className="bg-red-600"
-                onClick={hangup}
-              >
-                <IconPhoneOff className="h-5 w-5" />
-              </CircleButton>
-              <div className="text-[11px] text-zinc-300">{tUi("Disconnect")}</div>
-            </div>
-          </div>
-        ) : isCallConnected ? (
-          /* Show CTI controls when call is connected/answered */
-          <div className="mt-1 grid w-full grid-cols-4 place-items-center gap-2">
-            <div className="flex flex-col items-center gap-2">
-              <CircleButton
-                title={callUI.isMuted ? tUi("Unmute") : tUi("Mute")}
-                className="bg-zinc-700/70"
-                onClick={toggleMute}
-              >
-                {callUI.isMuted ? (
-                  <IconMicOff className="h-5 w-5" />
-                ) : (
-                  <IconMic className="h-5 w-5" />
-                )}
-              </CircleButton>
-              <div className="text-[11px] text-zinc-300">
-                {callUI.isMuted ? tUi("Unmute") : tUi("Mute")}
-              </div>
-            </div>
-
-            <div className="flex flex-col items-center gap-2">
-              <CircleButton title={tUi("End")} className="bg-red-600" onClick={hangup}>
-                <IconPhoneOff className="h-5 w-5" />
-              </CircleButton>
-              <div className="text-[11px] text-zinc-300">{tUi("End")}</div>
-            </div>
-
-            <div className="flex flex-col items-center gap-2">
-              <CircleButton
-                title={callUI.isHeld ? tUi("Unhold") : tUi("Hold", undefined, "phone action")}
-                className="bg-zinc-700/70"
-                onClick={toggleHold}
-              >
-                {callUI.isHeld ? (
-                  <IconPlay className="h-5 w-5" />
-                ) : (
-                  <IconPause className="h-5 w-5" />
-                )}
-              </CircleButton>
-              <div className="text-[11px] text-zinc-300">
-                {callUI.isHeld ? tUi("Unhold") : tUi("Hold", undefined, "phone action")}
-              </div>
-            </div>
-
-            <div className="flex flex-col items-center gap-2">
-              <CircleButton
-                title={tUi("Transfer")}
-                className="bg-zinc-700/70"
-                onClick={() => setShowTransfer(true)}
-              >
-                <IconPhoneForwarded className="h-5 w-5" />
-              </CircleButton>
-              <div className="text-[11px] text-zinc-300">{tUi("Transfer")}</div>
-            </div>
-          </div>
-        ) : (
-          /* Show only dial button when idle */
-          <div className="mt-1 flex w-full justify-center">
-            <div className="flex flex-col items-center gap-2">
-              <CircleButton
-                title={tUi("Call", undefined, "phone action")}
-                className={clsx("bg-emerald-600", !canCall && "opacity-50")}
-                onClick={startCall}
-                disabled={!canCall}
-              >
-                <IconPhone className="h-5 w-5" />
-              </CircleButton>
-              <div className="text-[11px] text-zinc-300">{tUi("Call", undefined, "phone action")}</div>
-            </div>
-          </div>
-        )}
-        <div className="w-full h-px bg-zinc-700/50"></div>
-
-        <button
-          type="button"
-          className="w-full flex items-center justify-between px-1 py-1 text-[11px] text-zinc-300 hover:text-white"
-          onClick={() => setShowDtmf((v) => !v)}
-          data-testid="voice-dtmf-open" title={tUi("DTMF")}
-        >
-          <span className="flex items-center gap-1">
-            <IconHash className="h-3 w-3" />
-            <span>{tUi("DTMF")}</span>
-          </span>
-          <IconChevronDown
-            className={clsx(
-              "h-3 w-3 transition-transform duration-200",
-              showDtmf && "rotate-180"
-            )}
-          />
-        </button>
-
-        {showDtmf && (
-          <div className="w-full rounded-2xl bg-zinc-900/60 p-0">
-            <div className="mb-1 min-h-[22px] min-w-[22px] break-all text-center text-[11px] text-zinc-200 bg-zinc-700/30 rounded-md px-5 py-1">
-              {dtmfBuffer}
-            </div>
-            <div className="grid grid-cols-3 gap-3 mx-12 mt-3">
-              {keypadDigits.flat().map((digit) => (
-                <button
-                  key={digit}
-                  data-testid="voice-dtmf-digit" data-digit={digit}
-                  onClick={() => handleKeypadDigit(digit)}
-                  disabled={!isCallActive}
-                  aria-disabled={!isCallActive}
-                  className={clsx(
-                    "h-10 w-10 rounded-full text-base text-white shadow active:scale-95",
-                    isCallActive
-                      ? "bg-zinc-800"
-                      : "bg-zinc-800/50 cursor-not-allowed"
-                  )}
-                >
-                  {digit}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-        <HandoffEntryBar callInteractionId={interaction?.id ?? null} />
-      </div>
-
+    <FloatingPhoneSurface toNumber={toNumber} displayedFromNumber={displayedFromNumber} isIncomingCall={isIncomingCall} isOutboundCall={isOutboundCall} isRinging={isRinging} activeCall={activeCall} isCallConnected={isCallConnected} callUI={callUI} canCall={canCall} startCall={startCall} handleAnswerCall={handleAnswerCall} handleRejectCall={handleRejectCall} hangup={hangup} toggleMute={toggleMute} toggleHold={toggleHold} setShowNumberModal={setShowNumberModal} showDtmf={showDtmf} setShowDtmf={setShowDtmf} dtmfBuffer={dtmfBuffer} keypadDigits={keypadDigits} handleKeypadDigit={handleKeypadDigit} isCallActive={isCallActive}
+      onTransfer={() => setShowTransfer(true)} handoffBar={<HandoffEntryBar callInteractionId={interaction?.id ?? null} />}
+    >
       {/* Number Selection Modal */}
       <NumberSelectionModal
         open={showNumberModal}
@@ -1619,7 +1105,7 @@ export function Softphone() {
           console.log("[Softphone] Transfer successful");
         }}
       />
-    </div>
+    </FloatingPhoneSurface>
   );
 }
 

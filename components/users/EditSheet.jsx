@@ -1,4 +1,5 @@
 "use client";
+import ExtensionAssignment from "@/components/telephony/ExtensionAssignment";
 import { roleDisplayText } from "@/lib/i18n/role-labels.mjs";
 import { useUiText } from "@/components/i18n/use-ui-text";
 
@@ -175,6 +176,7 @@ export default function EditSheet({
   const [roles, setRoles] = React.useState(["agent"]);
   const [verified, setVerified] = React.useState(false);
   const [active, setActive] = React.useState(true);
+  const [headsetControlsEnabled, setHeadsetControlsEnabled] = React.useState(false);
   const [experimentalFeatures, setExperimentalFeatures] = React.useState(false);
   const [status, setStatus] = React.useState(DEFAULT_USER_STATUS);
   const [mobile, setMobile] = React.useState("");
@@ -219,6 +221,7 @@ export default function EditSheet({
       setVerified(false);
       setActive(true);
       setExperimentalFeatures(false);
+      setHeadsetControlsEnabled(false);
       setStatus(DEFAULT_USER_STATUS);
       setMobile("");
       setSmsNumber("");
@@ -265,6 +268,7 @@ export default function EditSheet({
           setVerified(Boolean(d.verified));
           setActive(d.active !== undefined ? Boolean(d.active) : true);
           setExperimentalFeatures(d.experimental_features === true);
+          setHeadsetControlsEnabled((d.headset_controls_enabled ?? d.experimental_features) === true);
           setStatus(d.status || DEFAULT_USER_STATUS);
           setMobile(d.mobile || "");
           setSmsNumber(d.sms_number || "");
@@ -509,6 +513,7 @@ export default function EditSheet({
             skills,
             sendInvite,
             experimentalFeatures,
+            headsetControlsEnabled,
             active, verified, smsNumber, queueIds: userQueueIds, utilization: utilization.payload,
           }),
         });
@@ -582,6 +587,7 @@ export default function EditSheet({
         verified,
         active,
         experimentalFeatures,
+        headsetControlsEnabled,
         mobile,
         smsNumber,
         voiceNumber,
@@ -756,6 +762,7 @@ export default function EditSheet({
                 <>
                   <Card className="mx-5 my-4"><CardContent className="space-y-4 p-6">
                     <h3 className="text-sm font-semibold">{tUi("Account Settings")}</h3>
+                    <ExtensionAssignment type="user" targetId={createMode ? null : userId} />
                   {/* Invite Status Section */}
                   <div>
                     <h3 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-1">
@@ -853,6 +860,14 @@ export default function EditSheet({
                       checked={experimentalFeatures}
                       onCheckedChange={(value) => setExperimentalFeatures(Boolean(value))}
                     />
+                  </div>
+
+                  <div className="flex items-center justify-between gap-4 border-t pt-4">
+                    <div className="space-y-1">
+                      <Label htmlFor="headset-controls">{tUi("USB headset controls")}</Label>
+                      <p className="text-xs text-muted-foreground">{tUi("Allow Jabra, EPOS and Poly call controls for this user.")}</p>
+                    </div>
+                    <Switch id="headset-controls" checked={headsetControlsEnabled} onCheckedChange={setHeadsetControlsEnabled} />
                   </div>
 
                   {/* Name Section */}

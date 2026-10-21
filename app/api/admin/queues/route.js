@@ -1,3 +1,4 @@
+import { ownedVoiceNumber } from "@/lib/telephony/dialing.mjs";
 import { saveAdminSettings } from "@/lib/acd/utilization.mjs";
 import { NextResponse } from "next/server";
 import { getPostgresPool } from "@/lib/postgres.mjs";
@@ -49,7 +50,9 @@ async function GET_handler(request, _context, authz) {
   i = vals.length + 1;
 
   const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
-  const rowsSql = `SELECT id, name, display_name, description, routing_strategy, max_wait_time_secs, max_size, timeout_secs, overflow_queue_id, overflow_action, priority, enabled, active, created_at, updated_at FROM cc_queues ${whereSql} ORDER BY priority DESC, name ASC LIMIT ${pageSize} OFFSET ${offset}`;
+  const rowsSql = `SELECT id, name, display_name, description, routing_strategy, max_wait_time_secs, max_size, timeout_secs, overflow_queue_id, overflow_action, priority, enabled, active, created_at, updated_at, outbound_number,
+    (SELECT number FROM cc_extension_assignments WHERE queue_id=cc_queues.id) AS extension
+    FROM cc_queues ${whereSql} ORDER BY priority DESC, name ASC LIMIT ${pageSize} OFFSET ${offset}`;
   const [rowsRes, countRes] = await Promise.all([
     pool.query(rowsSql, vals),
     pool.query(`SELECT COUNT(*) AS c FROM cc_queues ${whereSql}`, vals),
@@ -75,6 +78,7 @@ async function POST_handler(request, _context, authz) {
     return NextResponse.json({ error: "Server not ready" }, { status: 500 });
 
   try {
+    const outbound = body.outboundNumberId === undefined ? undefined : await ownedVoiceNumber(body.outboundNumberId);
     const saved = await saveAdminSettings(pool, { scope: "queue", create: true, utilization: body.utilization, actor: String(user.id) }, async (pool, afterCommit) => {
     const id = await PgDb.insertQueue({
       name,
@@ -95,6 +99,8 @@ async function POST_handler(request, _context, authz) {
       skillRequirements: body.skillRequirements || {},
       priorityRules: body.priorityRules || [],
     }, pool);
+
+    if (outbound !== undefined) await pool.query("UPDATE cc_queues SET outbound_number_id=$2,outbound_number=$3 WHERE id=$1", [id,outbound?.id || null,outbound?.number || null]);
 
     // Update queue audio settings if provided
     if (

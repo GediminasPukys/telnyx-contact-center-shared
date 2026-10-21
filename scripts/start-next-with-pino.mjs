@@ -83,7 +83,20 @@ const videoAi = startVideoAiService({
   onState: state => logger.info("video_ai_runtime_state", { ...state, pid: process.pid }),
 });
 
+// Opt-in only on the LAN host that owns these phones. It must stay outside
+// Next compilation/HMR so active SIP dialogs survive page recompilation.
+let phoneSipController;
+if (process.env.HARDPHONE_SIP_CONTROLLER_HOST && process.env.HARDPHONE_SIP_CONTROLLER_EXTERNAL !== "true" && allowsWebRole(processRole)) {
+  const { startSipController } = await import("../lib/hardphones/sip-controller/server.mjs");
+  const { getPostgresPool } = await import("../lib/postgres.mjs");
+  phoneSipController = await startSipController({ pool: getPostgresPool(), host: process.env.HARDPHONE_SIP_CONTROLLER_HOST,
+    port: Number(process.env.HARDPHONE_SIP_CONTROLLER_PORT) || 5070,
+    onEvent: event => logger.info("phone_sip_controller",event) });
+  process.env.HARDPHONE_SIP_CONTROLLER_SOCKET = phoneSipController.socketPath;
+}
+
 async function stopApplicationRuntime() {
+  await phoneSipController?.stop();
   await videoAi.stop();
   await flushLoggingSinksBeforeExit();
 }

@@ -1,0 +1,11 @@
+{
+  "appUrl": "https://cc.example.com",
+  "relayUrl": "wss://cc.example.com/hardphone-bridge",
+  "bridgeId": "REPLACE_WITH_ENROLLED_BRIDGE_ID",
+  "bridgeToken": "REPLACE_WITH_ENROLLED_BRIDGE_TOKEN",
+  "sipHost": "192.168.1.20",
+  "sipPort": 5070,
+  "eventPort": 5071,
+  "allowedPhoneIds": ["REPLACE_WITH_PHONE_UUID"],
+  "nativePhones": []
+}

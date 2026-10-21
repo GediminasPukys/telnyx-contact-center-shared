@@ -17,10 +17,11 @@ function PopoverContent({
   className,
   align = "center",
   sideOffset = 4,
+  portalContainer,
   ...props
 }) {
   return (
-    <PopoverPrimitive.Portal>
+    <PopoverPrimitive.Portal container={portalContainer}>
       <PopoverPrimitive.Content
         data-slot="popover-content"
         align={align}

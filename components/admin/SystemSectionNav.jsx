@@ -15,6 +15,7 @@ export const SYSTEM_ITEMS = [
   { id: "call-generator", label: "Call Generator", icon: IconPhoneCall, href: "/admin/call-generator", description: "Create controlled call scenarios, actions, and test runs." },
   { id: "logging", label: "Logging", icon: IconBug, href: "/admin/logging", description: "Inspect live runtime events, log files, and logging policies." },
   { id: "phones-provisioning", label: "Phones Provisioning", icon: IconDeviceLandlinePhone, href: "/admin/phones-provisioning", description: "Manage hardphone inventory, bridges, and provisioning status." },
+  { id: "extensions", label: "Extensions & stations", icon: IconPhoneCall, href: "/admin/system/extensions", description: "Allocate internal numbers and manage phone station assignments." },
   { id: "theme-settings", label: "Theme Settings", icon: IconPalette, href: "/settings", description: "Customize branding, application colors, and authentication visuals." },
 ];
 

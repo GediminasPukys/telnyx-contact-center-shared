@@ -43,6 +43,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { notify } from "@/components/ToastNotify";
 import { cn } from "@/lib/utils";
+import { HeadsetRolloutSettings } from "@/components/admin/HeadsetRolloutSettings";
 import NotificationSoundSettings from "@/components/admin/NotificationSoundSettings";
 import { DEFAULT_NOTIFICATION_SOUNDS, NOTIFICATION_CHANNELS, NOTIFICATION_SOUNDS } from "@/lib/contact-center/notification-sounds.mjs";
 
@@ -248,6 +249,7 @@ export default function SystemSettingsPage() {
         </div> : loadError ? <Card><CardContent className="flex items-center justify-between gap-3 pt-6"><p role="alert" className="text-sm text-destructive">{loadError}</p><Button variant="outline" onClick={load}>{tUi("Retry settings")}</Button></CardContent></Card> :
         <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto pb-5 pr-1 xl:grid-cols-[minmax(0,1fr)_380px] xl:grid-rows-[minmax(0,1fr)] xl:overflow-hidden">
           <section aria-label={tUi("Settings overview")} className="min-w-0 space-y-4 xl:overflow-y-auto xl:p-1">
+            <HeadsetRolloutSettings />
             <SettingsSummary option={SETTINGS_OPTIONS.find(option => option.id === "sla")} selected={selectedId === "sla"} onSelect={() => selectSection("sla")}>
               {!sla.data && !sla.error ? <div role="status" aria-label={tUi("Loading SLA overview")} className="grid gap-2 sm:grid-cols-3">{[0, 1, 2].map(index => <Skeleton key={index} className="h-16 w-full" />)}</div> : sla.error ? <p role="alert" className="text-sm text-destructive">{sla.error}{tUi(" Select this card to reload SLA settings.")}</p> :
                 <div className="grid gap-2 sm:grid-cols-3">{sla.data.channels.map(channel => {

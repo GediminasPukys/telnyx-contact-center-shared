@@ -1,10 +1,15 @@
 "use client";
+import OutboundNumberSelect from "@/components/queues/OutboundNumberSelect";
 import { operationalStatusLabel } from "@/lib/i18n/interaction-labels.mjs";
 import { sourceText } from "@/lib/i18n/source-text.mjs";
 import { useUiText } from "@/components/i18n/use-ui-text";
+import PolycomProvisioningCard from "@/components/admin/PolycomProvisioningCard";
+import ExtensionAssignment from "@/components/telephony/ExtensionAssignment";
 
 
-import Image from "next/image";
+import PhoneVendorBadge from "@/components/telephony/PhoneVendorBadge";
+import StationArtwork from "@/components/telephony/StationArtwork";
+import { VENDOR_MODELS, modelCatalogEntry } from "@/lib/hardphones/model-catalog.mjs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
@@ -25,15 +30,15 @@ import {
 } from "@/components/ui/alert-dialog";
 import { notify } from "@/components/ToastNotify";
 import { AdminPageHeader, AdminPageShell } from "@/components/contact-center/WorkspacePageLayout";
-import { SYSTEM_EXIT_ITEM } from "@/components/admin/SystemSectionNav";
+import { SystemSectionPage } from "@/components/admin/SystemSectionNav";
 import { useExperimentalFeatures } from "@/lib/experimental-features-client";
 import { RAW_LOG_VIEWER_AVAILABLE } from "@/lib/deployment-capabilities.mjs";
-import { SectionRail, SECTION_RAIL_PAGE_GRID_CLASS, SECTION_RAIL_WIDTH } from "@/components/ui/section-rail";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   IconActivity,
   IconClockHour4,
   IconCopy,
-  IconDashboard,
   IconDeviceFloppy,
   IconDeviceLandlinePhone,
   IconDownload,
@@ -62,7 +67,6 @@ const API = "/api/admin/phones-provisioning";
 const HARDPHONE_RINGTONE_URL = "/audio/ringtone.mp3";
 
 const NAV_ITEMS = [
-  { id: "dashboard", label: "Dashboard", icon: IconDashboard, description: "Fleet status and provisioning activity" },
   { id: "phones", label: "Phones", icon: IconDeviceLandlinePhone, description: "Hard phone inventory and per-device config" },
   { id: "bridges", label: "Bridges", icon: IconRouteAltLeft, description: "Local LAN bridge agents and connection status" },
   { id: "logs", label: "Logs", icon: IconDownload, description: "Provisioning event log with raw details" },
@@ -77,158 +81,7 @@ const VENDORS = [
   { value: "audiocodes", label: "AudioCodes" },
 ];
 
-const VENDOR_LOGOS = {
-  polycom: "/images/hardphones/logos/polycom.jpg",
-  yealink: "/images/hardphones/logos/yealink.jpg",
-  audiocodes: "/images/hardphones/logos/audiocodes.jpg",
-};
-
-const POLY_UCS_DOCS = "https://docs.poly.com/bundle/poly-ucs-ag-6-4-5/page/r-ucs-supported-phone-models.html";
-const POLY_EDGE_DOCS = "https://docs.poly.com/bundle/poly-edge-e-ag-current/page/r-poly-edge-e-supported-features.html";
-const AUDIOCODES_DOCS = "https://www.audiocodes.com/library/technical-documents?productFamilyGroup=1639";
-const YEALINK_EOL_DOCS = "https://www.yealink.com/en/products_list_18.html";
-
-const VENDOR_MODELS = {
-  polycom: [
-    "VVX 101", "VVX 150", "VVX 201", "VVX 250", "VVX 300", "VVX 301", "VVX 310", "VVX 311", "VVX 350",
-    "VVX 400", "VVX 401", "VVX 410", "VVX 411", "VVX 450", "VVX 500", "VVX 501", "VVX 600", "VVX 601",
-    "CCX 350", "CCX 400", "CCX 500", "CCX 505", "CCX 600", "CCX 700",
-    "Edge E100", "Edge E220", "Edge E300", "Edge E320", "Edge E350", "Edge E400", "Edge E450", "Edge E500", "Edge E550",
-    "Edge B10", "Edge B20", "Edge B30", "Rove 20", "Rove 30", "Rove 40",
-  ],
-  yealink: [
-    "T19", "T19P", "T19P E2", "T20P", "T21", "T21P", "T21P E2", "T22P", "T23P", "T23G", "T26P", "T27P", "T27G", "T28P", "T29G",
-    "T31P", "T33G", "T32G", "T38G", "T40P", "T40G", "T41P", "T41S", "T42G", "T42S", "T43U", "T46G", "T46S", "T46U",
-    "T48G", "T48S", "T48U", "T52S", "T53", "T53W", "T54S", "T54W", "T56A", "T57W", "T58A", "T58V", "T58W",
-  ],
-  audiocodes: ["405", "405HD", "420HD", "425HD", "430HD", "C430HD", "440HD", "445HD", "450HD", "C450HD"],
-};
-
-function polyImage(model) {
-  const exactImages = {
-    "VVX 101": "/images/hardphones/poly-vvx-101.png",
-    "VVX 150": "/images/hardphones/poly-vvx-150.png",
-    "VVX 201": "/images/hardphones/poly-vvx-201.png",
-    "VVX 250": "/images/hardphones/poly-vvx-250.png",
-    "VVX 300": "/images/hardphones/poly-vvx-300.png",
-    "VVX 301": "/images/hardphones/poly-vvx-311.png",
-    "VVX 310": "/images/hardphones/poly-vvx-300.png",
-    "VVX 311": "/images/hardphones/poly-vvx-311.png",
-    "VVX 350": "/images/hardphones/poly-vvx-350.png",
-    "VVX 400": "/images/hardphones/poly-vvx-400.png",
-    "VVX 401": "/images/hardphones/poly-vvx-411.png",
-    "VVX 410": "/images/hardphones/poly-vvx-400.png",
-    "VVX 411": "/images/hardphones/poly-vvx-411.png",
-    "VVX 450": "/images/hardphones/poly-vvx-450.png",
-    "VVX 500": "/images/hardphones/poly-vvx-500.png",
-    "VVX 501": "/images/hardphones/poly-vvx-500.png",
-    "VVX 600": "/images/hardphones/poly-vvx-601.png",
-    "VVX 601": "/images/hardphones/poly-vvx-601.png",
-    "CCX 400": "/images/hardphones/poly-ccx-400.png",
-    "CCX 500": "/images/hardphones/poly-ccx-500.png",
-    "CCX 505": "/images/hardphones/poly-ccx-500.png",
-    "Edge E220": "/images/hardphones/poly-edge-e220.png",
-    "Edge E350": "/images/hardphones/poly-edge-e350.png",
-    "Edge E450": "/images/hardphones/poly-edge-e450.png",
-  };
-  if (exactImages[model]) return exactImages[model];
-  if (["CCX 350", "CCX 600", "CCX 700"].includes(model)) return "/images/hardphones/poly-ccx-400.png";
-  if (["Edge E100", "Edge E300", "Edge E320"].includes(model)) return "/images/hardphones/poly-edge-e220.png";
-  if (["Edge E400"].includes(model)) return "/images/hardphones/poly-edge-e350.png";
-  if (["Edge E500", "Edge E550"].includes(model)) return "/images/hardphones/poly-edge-e450.png";
-  return "/images/hardphones/poly-edge-e220.png";
-}
-
-function polyDocs(model) {
-  return model.startsWith("Edge") ? POLY_EDGE_DOCS : POLY_UCS_DOCS;
-}
-
-function yealinkImage(model) {
-  const exactImages = {
-    T19: "/images/hardphones/yealink-t19.png",
-    T19P: "/images/hardphones/yealink-t19p.png",
-    "T19P E2": "/images/hardphones/yealink-t19p-e2.png",
-    T20P: "/images/hardphones/yealink-t20p.png",
-    T21: "/images/hardphones/yealink-t21.png",
-    T21P: "/images/hardphones/yealink-t21p.png",
-    "T21P E2": "/images/hardphones/yealink-t21p-e2.png",
-    T22P: "/images/hardphones/yealink-t22p.png",
-    T23P: "/images/hardphones/yealink-t23p.png",
-    T23G: "/images/hardphones/yealink-t23g.png",
-    T26P: "/images/hardphones/yealink-t26p.png",
-    T27P: "/images/hardphones/yealink-t27p.png",
-    T27G: "/images/hardphones/yealink-t27g.png",
-    T28P: "/images/hardphones/yealink-t28p.png",
-    T29G: "/images/hardphones/yealink-t29g.png",
-    T31P: "/images/hardphones/yealink-t31p.png",
-    T32G: "/images/hardphones/yealink-t32g.png",
-    T33G: "/images/hardphones/yealink-t33g.png",
-    T38G: "/images/hardphones/yealink-t38g.png",
-    T40P: "/images/hardphones/yealink-t40p.png",
-    T40G: "/images/hardphones/yealink-t40g.png",
-    T41P: "/images/hardphones/yealink-t41p.png",
-    T41S: "/images/hardphones/yealink-t41s.png",
-    T42G: "/images/hardphones/yealink-t42g.png",
-    T42S: "/images/hardphones/yealink-t42s.png",
-    T43U: "/images/hardphones/yealink-t43u.png",
-    T46G: "/images/hardphones/yealink-t46g.png",
-    T46S: "/images/hardphones/yealink-t46s.png",
-    T46U: "/images/hardphones/yealink-t46u.png",
-    T48G: "/images/hardphones/yealink-t48g.png",
-    T48S: "/images/hardphones/yealink-t48s.png",
-    T48U: "/images/hardphones/yealink-t48u.png",
-    T52S: "/images/hardphones/yealink-t52s.png",
-    T53: "/images/hardphones/yealink-t53w.png",
-    T53W: "/images/hardphones/yealink-t53w.png",
-    T54S: "/images/hardphones/yealink-t54s.png",
-    T54W: "/images/hardphones/yealink-t54w.png",
-    T56A: "/images/hardphones/yealink-t56a.png",
-    T57W: "/images/hardphones/yealink-t57w.png",
-    T58A: "/images/hardphones/yealink-t58a.png",
-    T58V: "/images/hardphones/yealink-t58v.png",
-    T58W: "/images/hardphones/yealink-t58a.png",
-  };
-  return exactImages[model] || "/images/hardphones/yealink-t31p.png";
-}
-
-function yealinkDocs(model) {
-  const productDocs = {
-    T31P: "https://www.yealink.com/en/product-detail/ip-phone-t31p",
-    T33G: "https://www.yealink.com/en/product-detail/ip-phone-t33g",
-    T43U: "https://www.yealink.com/en/product-detail/ip-phone-t43u",
-    T46U: "https://www.yealink.com/en/product-detail/ip-phone-t46u",
-    T48U: "https://www.yealink.com/en/product-detail/ip-phone-t48u",
-    T53W: "https://www.yealink.com/en/product-detail/ip-phone-t53w",
-    T54W: "https://www.yealink.com/en/product-detail/ip-phone-t54w",
-    T57W: "https://www.yealink.com/en/product-detail/ip-phone-t57w",
-    T58W: "https://www.yealink.com/en/product-detail/ip-phone-t58w",
-  };
-  return productDocs[model] || YEALINK_EOL_DOCS;
-}
-
-const PHONE_MODEL_CATALOG = {
-  polycom: Object.fromEntries(VENDOR_MODELS.polycom.map((model) => [model, { image: polyImage(model), docs: polyDocs(model) }])),
-  yealink: Object.fromEntries(VENDOR_MODELS.yealink.map((model) => [model, { image: yealinkImage(model), docs: yealinkDocs(model) }])),
-  audiocodes: {
-    "405": { image: "/images/hardphones/audiocodes-405.png", docs: AUDIOCODES_DOCS },
-    "405HD": { image: "/images/hardphones/audiocodes-405hd.png", docs: "https://www.audiocodes.com/products/ip-phones/405hd-ip-phone" },
-    "420HD": { image: "/images/hardphones/audiocodes-420hd.png", docs: AUDIOCODES_DOCS },
-    "425HD": { image: "/images/hardphones/audiocodes-425hd.png", docs: "https://www.audiocodes.com/products/ip-phones/425hd-ip-phone" },
-    "430HD": { image: "/images/hardphones/audiocodes-430hd.png", docs: AUDIOCODES_DOCS },
-    "C430HD": { image: "/images/hardphones/audiocodes-c430hd.png", docs: "https://www.audiocodes.com/products/ip-phones/c430hd-ip-phone" },
-    "440HD": { image: "/images/hardphones/audiocodes-440hd.png", docs: AUDIOCODES_DOCS },
-    "445HD": { image: "/images/hardphones/audiocodes-445hd.png", docs: "https://www.audiocodes.com/products/ip-phones/445hd-ip-phone" },
-    "450HD": { image: "/images/hardphones/audiocodes-450hd.png", docs: AUDIOCODES_DOCS },
-    "C450HD": { image: "/images/hardphones/audiocodes-c450hd.png", docs: "https://www.audiocodes.com/products/ip-phones/c450hd-ip-phone" },
-  },
-};
-
-function modelCatalogEntry(vendor, model) {
-  const vendorCatalog = PHONE_MODEL_CATALOG[String(vendor || "").toLowerCase()] || {};
-  return vendorCatalog[model] || null;
-}
-
-const toneClasses = { emerald: "from-emerald-500/18 to-teal-500/5 text-emerald-600 dark:text-emerald-300", blue: "from-sky-500/18 to-blue-500/5 text-sky-600 dark:text-sky-300", violet: "from-violet-500/18 to-fuchsia-500/5 text-violet-600 dark:text-violet-300", amber: "from-amber-500/20 to-orange-500/5 text-amber-600 dark:text-amber-300", rose: "from-rose-500/18 to-red-500/5 text-rose-600 dark:text-rose-300" };
+const toneClasses = { emerald: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300", blue: "bg-sky-500/10 text-sky-600 dark:text-sky-300", violet: "bg-violet-500/10 text-violet-600 dark:text-violet-300", amber: "bg-amber-500/10 text-amber-600 dark:text-amber-300", rose: "bg-rose-500/10 text-rose-600 dark:text-rose-300" };
 const neutralActionClass = "bg-zinc-950 text-white shadow-sm hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-200";
 
 const PHONE_TIMEZONES = [
@@ -282,38 +135,11 @@ function vendorLabel(vendor, tUi = sourceText) {
 }
 
 function PhoneModelThumbnail({ vendor, model, className = "" }) {
-  const catalogEntry = modelCatalogEntry(vendor, model);
-  const vendorName = VENDORS.find((v) => v.value === vendor)?.label || vendorLabel(vendor);
-  if (!catalogEntry?.image) {
-    return (
-      <span className={`flex h-12 w-14 shrink-0 items-center justify-center rounded-lg border bg-muted/40 text-muted-foreground ${className}`} aria-hidden="true">
-        <IconDeviceLandlinePhone className="h-5 w-5" />
-      </span>
-    );
-  }
-  return (
-    <span className={`flex h-12 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border/70 bg-[radial-gradient(circle_at_50%_35%,rgba(14,165,233,0.14),transparent_52%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(226,232,240,0.86))] p-1.5 shadow-sm dark:bg-[radial-gradient(circle_at_50%_35%,rgba(56,189,248,0.2),transparent_52%),linear-gradient(135deg,rgba(39,39,42,0.98),rgba(9,9,11,0.92))] ${className}`}>
-      <Image src={catalogEntry.image} alt={`${vendorName} ${model}`} width={112} height={96} sizes="56px" className="h-full w-full object-contain drop-shadow-sm dark:drop-shadow-[0_10px_18px_rgba(0,0,0,0.65)]" />
-    </span>
-  );
+  return <StationArtwork station={{ vendor, model, kind: "deskphone" }} className={`h-16 w-16 shrink-0 border border-border/60 [&_img]:p-1 [&_svg]:size-7 ${className}`} />;
 }
 
 function VendorLogoBadge({ vendor, count }) {
-  const value = String(vendor || "").toLowerCase();
-  const logo = VENDOR_LOGOS[value];
-  const tUi = useUiText();
-  const label = vendorLabel(value, tUi);
-
-  if (!logo) {
-    return <Badge variant="outline" className={vendorBadgeClass(value)}>{count ? `${label}: ${count}` : label}</Badge>;
-  }
-
-  return (
-    <span className="inline-flex h-7 max-w-[128px] items-center rounded-full border border-border/80 bg-white px-2 py-1 shadow-sm" title={count ? `${label}: ${count}` : label} aria-label={count ? `${label}: ${count}` : label}>
-      <img src={logo} alt={label} className="h-full max-w-[92px] object-contain" loading="lazy" />
-      {count ? <span className="ml-2 text-xs font-semibold tabular-nums text-slate-700">{count}</span> : null}
-    </span>
-  );
+  return <PhoneVendorBadge vendor={vendor} count={count} />;
 }
 
 function formatMacDisplay(mac) {
@@ -345,7 +171,7 @@ function SettingCard({ icon: Icon, title, subtitle, children }) {
   return (
     <div className="rounded-2xl border bg-background/85 p-4 shadow-sm">
       <div className="mb-4 flex items-start gap-3">
-        <span className="rounded-xl bg-gradient-to-br from-sky-500/15 to-violet-500/15 p-2 text-sky-600">
+        <span className="rounded-xl bg-sky-500/10 p-2 text-sky-600">
           <Icon className="h-4 w-4" />
         </span>
         <div>
@@ -367,7 +193,7 @@ function MiniStat({ label, value, icon: Icon, tone = "blue" }) {
           <div className="mt-1 truncate text-sm font-semibold">{value}</div>
         </div>
         {Icon ? (
-          <span className={`shrink-0 rounded-lg bg-gradient-to-br p-1.5 ${toneClasses[tone] || toneClasses.blue}`}>
+          <span className={`shrink-0 rounded-lg p-1.5 ${toneClasses[tone] || toneClasses.blue}`}>
             <Icon className="h-3.5 w-3.5" />
           </span>
         ) : null}
@@ -435,8 +261,11 @@ export default function PhonesProvisioningPage() {
     enabled: experimentalFeaturesEnabled,
     loading: experimentalFeaturesLoading,
   } = useExperimentalFeatures();
-  const [active, setActive] = useState("dashboard");
+  const [active, setActive] = useState("phones");
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const editorRef = useRef(null);
+  const layoutRef = useRef(null);
   const [saving, setSaving] = useState(false);
   const [phones, setPhones] = useState([]);
   const [availablePhoneNumbers, setAvailablePhoneNumbers] = useState([]);
@@ -504,6 +333,8 @@ export default function PhonesProvisioningPage() {
         fetch(`${API}/dashboard`),
         fetch(`${API}/bridges`),
       ]);
+      if (!phonesRes.ok || !dashboardRes.ok || !bridgesRes.ok) throw new Error("Failed to load phones provisioning");
+      setLoadError("");
       const phonesData = phonesRes.ok ? await phonesRes.json() : null;
       const dashboardData = dashboardRes.ok ? await dashboardRes.json() : null;
       const bridgesData = bridgesRes.ok ? await bridgesRes.json() : { bridges: [] };
@@ -519,6 +350,7 @@ export default function PhonesProvisioningPage() {
       setBridges(bridgesData.bridges || []);
       if (toast) notify({ title: "Phones provisioning refreshed", description: "Data reloaded.", variant: "success" });
     } catch (err) {
+      setLoadError(err.message);
       notify({ title: "Failed to load phones provisioning", description: err.message, variant: "error" });
     } finally {
       if (!options.silent) setLoading(false);
@@ -545,7 +377,7 @@ export default function PhonesProvisioningPage() {
         vendor: selectedPhone.vendor || "polycom",
         model: selectedPhone.model || "",
         phone_name: selectedPhone.phone_name || "",
-        label: selectedPhone.label || "",
+        label: selectedPhone.label || selectedPhone.extension || "",
         assigned_phone_number_id: selectedPhone.assigned_phone_number_id || "",
         assigned_phone_number: selectedPhone.assigned_phone_number || "",
         ip_address: selectedPhone.last_ip || selectedPhone.ip_address || "",
@@ -559,6 +391,15 @@ export default function PhonesProvisioningPage() {
     // selectedPhone with a fresh object from the server; resetting the draft on every
     // refresh would wipe unsaved edits in Context Settings before the admin can save.
   }, [selectedPhoneId, hardphoneConfig.userTimezone]);
+
+  function selectPhone(id) {
+    setSelectedPhoneId(id);
+    if (window.matchMedia("(min-width: 1280px)").matches) editorRef.current?.scrollTo({ top: 0 });
+    else if (editorRef.current && layoutRef.current) {
+      const container = layoutRef.current;
+      container.scrollTo({ top: editorRef.current.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop, behavior: "smooth" });
+    }
+  }
 
   const draftValid = phoneDraftValid(phoneDraft);
 
@@ -594,7 +435,7 @@ export default function PhonesProvisioningPage() {
         vendor: phoneDraft.vendor,
         model: phoneDraft.model.trim(),
         phone_name: phoneDraft.phone_name.trim(),
-        label: phoneDraft.label.trim(),
+        label: phoneDraft.label.trim() === selectedPhone?.extension ? "" : phoneDraft.label.trim(),
         assigned_phone_number_id: phoneDraft.assigned_phone_number_id || "",
         assigned_phone_number: phoneDraft.assigned_phone_number || "",
         local_bridge_id: phoneDraft.local_bridge_id.trim(),
@@ -611,8 +452,11 @@ export default function PhonesProvisioningPage() {
         throw new Error(data.error || "Save failed");
       }
       const data = await res.json();
-      notify({ title: selectedPhone ? "Phone updated" : "Phone added", description: formatMacDisplay(data.phone?.mac), variant: "success" });
-      setPhones((prev) => (selectedPhone ? prev.map((p) => (p.id === selectedPhone.id ? data.phone : p)) : [data.phone, ...prev]));
+      notify({ title: selectedPhone ? "Phone updated" : "Phone added", description: data.displaySync?.ok === false ? tUi("Settings saved. The display label will update when the phone next provisions.") : formatMacDisplay(data.phone?.mac), variant: "success" });
+      setPhones((prev) => (selectedPhone ? prev.map((p) => (p.id === selectedPhone.id ? { ...p, ...data.phone } : p)) : [data.phone, ...prev]));
+      setPhoneDraft(d => d.label === phoneDraft.label
+        ? {...d,label:data.phone?.label || data.phone?.extension || selectedPhone?.extension || ""}
+        : d);
       if (!selectedPhone && data.phone?.id) setSelectedPhoneId(data.phone.id);
     } catch (err) {
       notify({ title: "Save failed", description: err.message, variant: "error" });
@@ -649,7 +493,7 @@ export default function PhonesProvisioningPage() {
       });
       if (!res.ok) throw new Error("Update failed");
       const data = await res.json();
-      setPhones((prev) => prev.map((p) => (p.id === item.id ? data.phone : p)));
+      setPhones((prev) => prev.map((p) => (p.id === item.id ? { ...p, ...data.phone } : p)));
       notify({ title: next === "disabled" ? "Provisioning disabled" : "Provisioning re-enabled", description: formatMacDisplay(item.mac), variant: "success" });
     } catch (err) {
       notify({ title: "Update failed", description: err.message, variant: "error" });
@@ -688,7 +532,7 @@ export default function PhonesProvisioningPage() {
     }
   }
 
-  const headerCreate = active === "phones" ? { label: "New phone", onClick: () => { setSelectedPhoneId(null); refresh(false, { includeAvailablePhoneNumbers: true }); } } : active === "bridges" ? { label: "New bridge", onClick: () => setSelectedBridgeId(null) } : null;
+  const headerCreate = ["phones", "bridges"].includes(active);
   const totals = dashboard?.totals || { total: 0, provisioned: 0, pending: 0, disabled: 0, recently_seen: 0 };
 
   if (experimentalFeaturesLoading || !experimentalFeaturesEnabled) {
@@ -708,41 +552,39 @@ export default function PhonesProvisioningPage() {
         title={tUi("Phones Provisioning")}
         badges={(
           <Badge variant="outline" className="border-sky-500/40 bg-sky-500/10 text-sky-700 dark:text-sky-300">
-            {totals.total}{tUi(" phones")}</Badge>
+            {loading && !dashboard ? <Skeleton className="h-4 w-12" /> : <>{totals.total}{tUi(" phones")}</>}</Badge>
         )}
         actions={(
           <>
             <Button variant="outline" size="sm" onClick={() => (active === "logs" ? loadLogs() : refresh(true))} disabled={loading || logsLoading}>
               <IconRefresh className={`mr-2 h-4 w-4 ${loading || logsLoading ? "animate-spin" : ""}`} />{tUi("Refresh")}</Button>
             {headerCreate ? (
-              <Button size="sm" className={neutralActionClass} onClick={headerCreate.onClick} disabled={saving}>
+              <Button size="sm" className={neutralActionClass} onClick={() => { if (active === "phones") { selectPhone(null);setPhoneDraft(emptyPhoneDraft(hardphoneConfig.userTimezone)); } else setSelectedBridgeId(null); }} disabled={saving}>
                 <IconWand className="mr-2 h-4 w-4" />
-                {tUi(headerCreate.label)}
+                {active === "phones" ? tUi("New phone") : tUi("New bridge")}
               </Button>
             ) : null}
           </>
         )}
       />
-      <main className={SECTION_RAIL_PAGE_GRID_CLASS} style={{ gridTemplateColumns: `${SECTION_RAIL_WIDTH} minmax(0,1fr) 380px` }}>
-        <SectionRail fixedItems={[SYSTEM_EXIT_ITEM]} items={NAV_ITEMS} activeId={active} onSelect={(id) => id === "exit" ? router.push("/admin/system") : setActive(id)} ariaLabel={tUi("Phones provisioning sections")} />
-
-        {/* Main panel */}
-        <section className="min-h-0 overflow-hidden rounded-2xl border bg-card/95 shadow-sm backdrop-blur flex flex-col">
-          <div className="h-16 shrink-0 border-b bg-card/95 px-5 flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <h2 className="text-sm font-semibold">{tUi(activeMeta.label)}</h2>
-              <p className="text-xs text-muted-foreground">{tUi(activeMeta.description)}</p>
+      <SystemSectionPage activeId="phones-provisioning">
+      <div ref={layoutRef} className="grid min-h-0 flex-1 gap-4 overflow-y-auto xl:grid-cols-[minmax(0,1fr)_380px] xl:grid-rows-[minmax(0,1fr)] xl:overflow-hidden">
+        <section className="flex h-[min(760px,75svh)] min-h-80 min-w-0 flex-col overflow-hidden rounded-xl border bg-card xl:h-auto xl:min-h-0" data-testid="provisioning-list-card">
+          <Tabs value={active} onValueChange={setActive} className="min-h-0 flex-1 gap-0">
+            <div className="shrink-0 px-4 pt-3">
+              <TabsList aria-label={tUi("Phones provisioning sections")}>
+                {NAV_ITEMS.map(item => <TabsTrigger key={item.id} value={item.id}><item.icon />{tUi(item.label)}</TabsTrigger>)}
+              </TabsList>
             </div>
-          </div>
-          <div className="flex-1 min-h-0 overflow-y-auto p-5">
-            {active === "dashboard" ? (
-              <DashboardView dashboard={dashboard} phones={phones} />
-            ) : active === "phones" ? (
+            {loadError ? <div role="alert" className="m-4 flex shrink-0 items-center justify-between gap-2 rounded-lg border border-destructive/30 p-3 text-sm text-destructive">{tUi(loadError)}<Button variant="outline" size="sm" onClick={() => refresh()}>{tUi("Retry")}</Button></div> : null}
+            <TabsContent value={active} className={`min-h-0 ${active === "phones" ? "flex flex-col overflow-hidden" : "overflow-y-auto p-4"}`}>
+            {loading && !phonesLoadSucceeded ? <div className="space-y-4 p-4" aria-busy="true"><Skeleton className="h-20 w-full" />{Array.from({ length: 5 },(_,i) => <Skeleton key={i} className="h-16 w-full" />)}</div> : !phonesLoadSucceeded ? null : <>
+            {active === "phones" ? (
               <PhonesListView
                 phones={phones}
                 selectedPhoneId={selectedPhone?.id || null}
                 selectedRebootIds={selectedRebootIds}
-                setSelectedPhoneId={setSelectedPhoneId}
+                setSelectedPhoneId={selectPhone}
                 setSelectedRebootIds={setSelectedRebootIds}
                 deletePhone={deletePhone}
                 togglePhoneState={togglePhoneState}
@@ -765,32 +607,32 @@ export default function PhonesProvisioningPage() {
             ) : (
               <SettingsSummaryView />
             )}
-          </div>
+            </>}
+            </TabsContent>
+          </Tabs>
         </section>
 
         {/* Right panel — Context Settings */}
-        <aside className="min-h-0 overflow-hidden rounded-2xl border bg-card/92 shadow-sm backdrop-blur flex flex-col">
+        <aside className="flex h-[min(760px,75svh)] min-h-80 flex-col overflow-hidden rounded-xl border bg-card xl:h-auto xl:min-h-0" data-testid="provisioning-editor">
           <PanelHeader
-            title={active === "dashboard" ? tUi("Fleet monitor") : active === "logs" ? tUi("Log filters") : tUi("Context settings")}
-            description={active === "dashboard" ? tUi("Fleet status overview") : active === "logs" ? tUi("Range and page controls") : tUi("{value0} configuration", { value0: activeMeta.label })}
+            title={active === "phones" ? selectedPhone?.phone_name || selectedPhone?.label || tUi("New phone") : active === "logs" ? tUi("Log filters") : tUi("Context settings")}
+            description={active === "logs" ? tUi("Range and page controls") : tUi("{value0} configuration", { value0: activeMeta.label })}
           />
-          <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
-            {active === "dashboard" ? (
-              <div className="rounded-xl border bg-muted/30 p-4 text-sm text-muted-foreground">{tUi("Phones report in when they fetch config files from the provisioning endpoint. Open Logs under Bridges to inspect the detailed event history.")}</div>
-            ) : active === "phones" ? (
+          <div ref={editorRef} className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4" data-testid="provisioning-editor-scroll">
+            {loading && !phonesLoadSucceeded ? <div className="space-y-4"><Skeleton className="h-32 w-full" /><Skeleton className="h-64 w-full" /></div> : loadError && !phonesLoadSucceeded ? null : active === "phones" ? (
               <PhoneEditor
                 draft={phoneDraft}
                 setDraft={setPhoneDraft}
                 editing={Boolean(selectedPhone)}
                 phone={selectedPhone}
-                valid={draftValid}
-                saving={saving}
                 bridges={bridges}
-                availablePhoneNumbers={availablePhoneNumbers}
                 hardphoneConfig={hardphoneConfig}
-                save={savePhone}
                 rebootPhones={requestRebootPhones}
                 rebooting={rebooting}
+                onExtensionSaved={({number,previousNumber}) => {
+                  setPhoneDraft(d => !d.label.trim() || d.label.trim() === previousNumber ? {...d,label:number} : d);
+                  refresh(false, { silent: true });
+                }}
               />
             ) : active === "bridges" ? (
               <BridgeEditor bridges={bridges} bridge={selectedBridge} phones={phones} refresh={refresh} onSelect={setSelectedBridgeId} />
@@ -800,8 +642,24 @@ export default function PhonesProvisioningPage() {
               <SettingsEditor bridges={bridges} refresh={refresh} />
             )}
           </div>
+          {active === "phones" && (phonesLoadSucceeded || loading) ? (
+            <div className="shrink-0 space-y-2 border-t bg-card p-4" data-testid="provisioning-editor-footer">
+              {!phonesLoadSucceeded ? <Skeleton className="h-9 w-full" /> : (
+                <>
+                  <Button className="w-full" onClick={savePhone} disabled={!draftValid || saving || (!selectedPhone && (!hardphoneConfig.phoneAdminPasswordConfigured || !hardphoneConfig.outboundVoiceProfileConfigured))} data-testid="hp-save-phone">
+                    {saving ? <IconLoader2 className="mr-2 h-4 w-4 animate-spin" /> : <IconDeviceFloppy className="mr-2 h-4 w-4" />}
+                    {selectedPhone ? tUi("Save phone") : tUi("Add phone")}
+                  </Button>
+                  {!draftValid ? (
+                    <p className="text-xs text-amber-600 dark:text-amber-300">{tUi("Required: a valid 12-hex-digit MAC address and a vendor.")}</p>
+                  ) : null}
+                </>
+              )}
+            </div>
+          ) : null}
         </aside>
-      </main>
+      </div>
+      </SystemSectionPage>
       <AlertDialog open={Boolean(pendingRebootIds.length)} onOpenChange={(open) => { if (!open) { setPendingRebootIds([]); setPendingRebootHostOverrides({}); } }}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -850,57 +708,6 @@ export default function PhonesProvisioningPage() {
   );
 }
 
-function DashboardView({ dashboard, phones }) {
-  const tUi = useUiText();
-  const totals = dashboard?.totals || { total: 0, provisioned: 0, pending: 0, disabled: 0, recently_seen: 0 };
-  const byVendor = dashboard?.byVendor || [];
-
-  return (
-    <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        <MiniStat label={tUi("Total phones")} value={totals.total} icon={IconDeviceLandlinePhone} tone="blue" />
-        <MiniStat label={tUi("Provisioned")} value={totals.provisioned} icon={IconShieldCheck} tone="emerald" />
-        <MiniStat label={tUi("Pending")} value={totals.pending} icon={IconClockHour4} tone="amber" />
-        <MiniStat label={tUi("Disabled")} value={totals.disabled} icon={IconActivity} tone="rose" />
-        <MiniStat label={tUi("Seen last 2h")} value={totals.recently_seen} icon={IconActivity} tone="violet" />
-      </div>
-
-      <SettingCard icon={IconDeviceLandlinePhone} title={tUi("Fleet by vendor")} subtitle={tUi("Inventory split across supported manufacturers")}>
-        {byVendor.length ? (
-          <div className="flex flex-wrap gap-2">
-            {byVendor.map((v) => (
-              <VendorLogoBadge key={v.vendor} vendor={v.vendor} count={v.count} />
-            ))}
-          </div>
-        ) : <p className="text-sm text-muted-foreground">{tUi("No phones in inventory yet — add one in the Phones section.")}</p>}
-      </SettingCard>
-
-      <SettingCard icon={IconActivity} title={tUi("Phone status")} subtitle={tUi("Registration identity and last contact per device")}>
-        {phones.length ? (
-          <div className="overflow-hidden rounded-xl border">
-            <div className="grid bg-muted/45 px-3 py-2 text-xs font-semibold text-muted-foreground" style={{ gridTemplateColumns: "minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1.2fr)" }}>
-              <span>{tUi("Phone")}</span><span>{tUi("Vendor")}</span><span>{tUi("State")}</span><span>{tUi("SIP user")}</span><span>{tUi("Last seen")}</span>
-            </div>
-            {phones.slice(0, 12).map((p) => (
-              <div key={p.id} className="grid items-center border-t px-3 py-2 text-sm" style={{ gridTemplateColumns: "minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1.2fr)" }}>
-                <span className="min-w-0">
-                  <span className="block truncate font-medium">{p.label || formatMacDisplay(p.mac)}</span>
-                  <span className="block truncate font-mono text-[11px] text-muted-foreground">{formatMacDisplay(p.mac)}</span>
-                </span>
-                <span><VendorLogoBadge vendor={p.vendor} /></span>
-                <span><Badge variant="outline" className={stateBadgeClass(p.provisioning_state)}>{p.provisioning_state}</Badge></span>
-                <span className="truncate font-mono text-xs">{p.sip_username || "—"}</span>
-                <span className="truncate text-xs text-muted-foreground">{p.last_seen_at ? formatTime(p.last_seen_at) : tUi("never")}</span>
-              </div>
-            ))}
-          </div>
-        ) : <Empty title={tUi("No phones yet")} description={tUi("Add hard phones in the Phones section to see fleet status here.")} />}
-      </SettingCard>
-
-    </div>
-  );
-}
-
 function logDetailText(detail) {
   if (detail == null) return "{}";
   if (typeof detail === "string") return detail;
@@ -938,13 +745,13 @@ function LogsView({ logs, days, page, pageSize, loading, setLogDays, setLogPage,
               </Select>
             </div>
           </div>
-          <Badge variant="outline" className="bg-card">{total}{tUi(" event")}{total === 1 ? "" : tUi("s")}</Badge>
+          {loading ? <Skeleton className="h-6 w-20" /> : <Badge variant="outline" className="bg-card">{total}{tUi(" event")}{total === 1 ? "" : tUi("s")}</Badge>}
         </div>
       </SettingCard>
 
       <SettingCard icon={IconActivity} title={tUi("Event list")} subtitle={tUi("Expand a row to inspect hp_provisioning_events.detail")}>
         {loading ? (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground"><IconLoader2 className="h-4 w-4 animate-spin" />{tUi(" Loading logs…")}</div>
+          <div className="space-y-3" aria-busy="true">{Array.from({length:5},(_,i)=><Skeleton key={i} className="h-14 w-full" />)}</div>
         ) : events.length ? (
           <Accordion type="multiple" className="rounded-xl border">
             {events.map((event) => (
@@ -990,89 +797,61 @@ function LogsContext({ logs, days, pageSize, loading, onRefresh }) {
 
 function PhonesListView({ phones, selectedPhoneId, selectedRebootIds, setSelectedPhoneId, setSelectedRebootIds, deletePhone, togglePhoneState, rebootPhones, rebooting }) {
   const tUi = useUiText();
-  if (!phones.length) {
-    return <Empty title={tUi("No phones yet")} description={tUi("Use New phone in the header, fill in the MAC and vendor in Context Settings on the right, then save. A Telnyx SIP credential is created automatically.")} />;
-  }
-  const allSelected = selectedRebootIds.length === phones.length;
-  const toggleRebootSelection = (id) => setSelectedRebootIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-  return (
-    <div className="rounded-2xl border bg-background/85 p-5 shadow-sm">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h3 className="text-lg font-semibold">{tUi("Phone inventory")}</h3>
-          <p className="text-sm text-muted-foreground">{tUi("Rows select configuration in the right Context Settings panel. Use checkboxes for bulk remote reboot.")}</p>
-        </div>
-        <div className="flex flex-wrap justify-end gap-2">
-          <Button size="sm" variant="outline" disabled={rebooting || !selectedRebootIds.length} onClick={() => rebootPhones(selectedRebootIds)} data-testid="hp-bulk-reboot-selected">
-            {rebooting ? <IconLoader2 className="mr-2 h-4 w-4 animate-spin" /> : <IconPower className="mr-2 h-4 w-4" />}{tUi("Reboot selected")}</Button>
-          <Button size="sm" variant="outline" disabled={rebooting || !phones.length} onClick={() => rebootPhones(phones.map((p) => p.id))} data-testid="hp-bulk-reboot-all">{tUi("Reboot all")}</Button>
-          <Badge variant="outline" className="bg-card">{phones.length}{tUi(" total")}</Badge>
-        </div>
+  const [search, setSearch] = useState("");
+  const [vendor, setVendor] = useState("");
+  const query = search.trim().toLowerCase();
+  const visible = phones.filter(p => (!vendor || p.vendor === vendor) && (!query || [p.phone_name,p.label,p.mac,formatMacDisplay(p.mac),p.model,p.sip_username,p.extension,p.last_ip].some(v => String(v || "").toLowerCase().includes(query))));
+  const allSelected = visible.length > 0 && visible.every(p => selectedRebootIds.includes(p.id));
+  const toggleRebootSelection = id => setSelectedRebootIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev,id]);
+  return <>
+    <div className="shrink-0 space-y-3 p-4" data-testid="provisioning-filters">
+      <div className="grid grid-cols-3 gap-2">
+        {VENDORS.map(v => <button type="button" key={v.value} aria-pressed={vendor === v.value} onClick={() => setVendor(current => current === v.value ? "" : v.value)} className={`flex min-w-0 items-center gap-2 rounded-xl border bg-muted/20 p-3 text-left transition hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${vendor === v.value ? "border-foreground/40 ring-1 ring-foreground/20" : "border-border"}`}>
+          <span className={`rounded-lg p-2 ${vendorBadgeClass(v.value)}`}><IconDeviceLandlinePhone className="size-4" /></span>
+          <div className="min-w-0 flex-1"><p className="truncate text-xs font-medium">{v.label}</p><p className="mt-0.5 text-lg font-semibold tabular-nums">{phones.filter(p => p.vendor === v.value).length}</p></div>
+        </button>)}
       </div>
-      <div className="mt-5 overflow-hidden rounded-xl border">
-        <div className="grid bg-muted/45 px-3 py-2 text-xs font-semibold text-muted-foreground" style={{ gridTemplateColumns: "36px minmax(0,1.6fr) minmax(0,1.15fr) minmax(0,.9fr) minmax(0,.9fr) minmax(0,1fr) minmax(0,1.1fr) 96px" }}>
-          <span><input type="checkbox" checked={allSelected} onChange={() => setSelectedRebootIds(allSelected ? [] : phones.map((p) => p.id))} aria-label={tUi("Select all phones for reboot")} /></span><span>{tUi("Phone")}</span><span>{tUi("Phone number")}</span><span>{tUi("Vendor")}</span><span>{tUi("Model")}</span><span>{tUi("State")}</span><span>{tUi("Last seen")}</span><span className="text-right">{tUi("Actions")}</span>
-        </div>
-        {phones.map((p) => {
-          const selected = selectedPhoneId === p.id;
-          const rebootSelected = selectedRebootIds.includes(p.id);
-          return (
-            <div
-              key={p.id}
-              onClick={() => setSelectedPhoneId(p.id)}
-              className={`grid cursor-pointer items-center border-t px-3 py-2.5 text-sm transition hover:bg-muted/40 ${selected ? "bg-sky-500/10" : ""}`}
-              style={{ gridTemplateColumns: "36px minmax(0,1.6fr) minmax(0,1.15fr) minmax(0,.9fr) minmax(0,.9fr) minmax(0,1fr) minmax(0,1.1fr) 96px" }}
-            >
-              <span onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={rebootSelected} onChange={() => toggleRebootSelection(p.id)} aria-label={tUi("Select {value0} for reboot", { value0: formatMacDisplay(p.mac) })} /></span>
-              <span className="flex min-w-0 items-center gap-3">
-                <PhoneModelThumbnail vendor={p.vendor} model={p.model} />
-                <span className="min-w-0">
-                  <span className="block truncate font-medium">{p.phone_name || p.label || formatMacDisplay(p.mac)}</span>
-                  <span className="block truncate font-mono text-[11px] text-muted-foreground">{formatMacDisplay(p.mac)}</span>
-                </span>
-              </span>
-              <span className="truncate font-mono text-xs">{p.assigned_phone_number || "—"}</span>
-              <span><VendorLogoBadge vendor={p.vendor} /></span>
-              <span className="truncate text-xs">{p.model || "—"}</span>
-              <span><Badge variant="outline" className={stateBadgeClass(p.provisioning_state)}>{p.provisioning_state}</Badge><Badge variant="outline" className={`${registrationBadgeClass(p.sip_registration_status)} mt-1`}>{tUi(registrationBadgeLabel(p.sip_registration_status))}</Badge></span>
-              <span className="truncate text-xs text-muted-foreground">{p.last_seen_at ? formatTime(p.last_seen_at) : tUi("never")}</span>
-              <span className="flex items-center justify-end gap-1">
-                <Button size="icon" variant="ghost" className="h-7 w-7" title={tUi("Remote reboot")} disabled={rebooting} onClick={(e) => { e.stopPropagation(); rebootPhones([p.id]); }}>
-                  <IconPower className="h-3.5 w-3.5" />
-                </Button>
-                <Button size="icon" variant="ghost" className="h-7 w-7" title={p.provisioning_state === "disabled" ? tUi("Enable provisioning") : tUi("Disable provisioning")} onClick={(e) => { e.stopPropagation(); togglePhoneState(p); }}>
-                  {p.provisioning_state === "disabled" ? <IconEye className="h-3.5 w-3.5" /> : <IconEyeOff className="h-3.5 w-3.5" />}
-                </Button>
-                <Button size="icon" variant="ghost" className="h-7 w-7" title={tUi("Delete")} onClick={(e) => { e.stopPropagation(); deletePhone(p); }}>
-                  <IconTrash className="h-3.5 w-3.5" />
-                </Button>
-              </span>
-            </div>
-          );
-        })}
+      <div className="flex flex-wrap items-center gap-2">
+        <Input value={search} onChange={e => setSearch(e.target.value)} placeholder={tUi("Search name, model, MAC or extension")} aria-label={tUi("Search phones")} className="min-w-40 flex-1" />
+        <Badge variant="outline" className="font-normal tabular-nums">{tUi("{value0} shown", { value0: visible.length })}</Badge>
+        <Button size="sm" variant="outline" disabled={rebooting || !selectedRebootIds.length} onClick={() => rebootPhones(selectedRebootIds)} data-testid="hp-bulk-reboot-selected"><IconPower className="size-4" />{tUi("Reboot selected")}{selectedRebootIds.length ? ` (${selectedRebootIds.length})` : ""}</Button>
+        <Button size="sm" variant="outline" disabled={rebooting || !phones.length} onClick={() => rebootPhones(phones.map(p => p.id))} data-testid="hp-bulk-reboot-all">{tUi("Reboot all")}</Button>
       </div>
     </div>
-  );
+    <div className="min-h-0 flex-1 overflow-auto overscroll-contain" data-testid="provisioning-phones-scroll">
+      {!phones.length ? <div className="px-4 pb-4"><Empty title={tUi("No phones yet")} description={tUi("Use New phone in the header, fill in the MAC and vendor in Context Settings on the right, then save. A Telnyx SIP credential is created automatically.")} /></div> : !visible.length ? <div className="px-4 pb-4"><Empty title={tUi("No matching phones")} description={tUi("Try another name, model or number.")} /></div> : <table className="w-full min-w-[800px] text-left text-sm">
+        <thead className="sticky top-0 z-10 bg-card text-xs text-muted-foreground"><tr className="border-y">
+          <th className="w-10 py-3 pl-4"><input type="checkbox" checked={allSelected} onChange={() => setSelectedRebootIds(prev => allSelected ? prev.filter(id => !visible.some(p => p.id === id)) : [...new Set([...prev,...visible.map(p => p.id)])])} aria-label={tUi("Select all phones for reboot")} /></th>
+          <th className="px-2 py-3 font-medium">{tUi("Phone")}</th><th className="px-2 font-medium">{tUi("Extension")}</th><th className="px-2 font-medium">{tUi("DID")}</th><th className="px-2 font-medium">{tUi("State")}</th><th className="px-2 font-medium">{tUi("Last seen")}</th><th className="pr-4 text-right font-medium">{tUi("Actions")}</th>
+        </tr></thead>
+        <tbody>{visible.map(p => <tr key={p.id} data-phone-id={p.id} data-selected={selectedPhoneId === p.id} onClick={() => setSelectedPhoneId(p.id)} className={`cursor-pointer border-b transition hover:bg-muted/40 ${selectedPhoneId === p.id ? "bg-muted/60" : ""}`}>
+          <td className="py-3 pl-4" onClick={e => e.stopPropagation()}><input type="checkbox" checked={selectedRebootIds.includes(p.id)} onChange={() => toggleRebootSelection(p.id)} aria-label={tUi("Select {value0} for reboot", { value0: formatMacDisplay(p.mac) })} /></td>
+          <td className="max-w-72 px-2 py-3"><button type="button" className="flex w-full items-center gap-3 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" onClick={e => {e.stopPropagation();setSelectedPhoneId(p.id);}} aria-pressed={selectedPhoneId === p.id}>
+            <PhoneModelThumbnail vendor={p.vendor} model={p.model} /><span className="min-w-0"><span className="block truncate font-semibold">{p.phone_name || p.label || formatMacDisplay(p.mac)}</span><span className="mt-1 flex flex-wrap gap-1"><PhoneVendorBadge vendor={p.vendor} compact />{p.model ? <Badge variant="outline" className={`text-[10px] ${vendorBadgeClass(p.vendor)}`}>{p.model}</Badge> : null}</span><span className="mt-1 block font-mono text-[10px] text-muted-foreground">{formatMacDisplay(p.mac)}</span></span>
+          </button></td>
+          <td data-testid="phone-extension" className="px-2 font-mono text-xs">{p.extension ? <Badge variant="outline" className="border-sky-500/30 bg-sky-500/10 font-mono text-sky-700 dark:text-sky-300">{p.extension}</Badge> : null}</td>
+          <td data-testid="phone-did" className="whitespace-nowrap px-2 font-mono text-xs tabular-nums">{p.assigned_phone_number || ""}</td>
+          <td className="px-2"><div className="flex flex-col items-start gap-1"><Badge variant="outline" className={stateBadgeClass(p.provisioning_state)}>{p.provisioning_state}</Badge><Badge variant="outline" className={registrationBadgeClass(p.sip_registration_status)}>{tUi(registrationBadgeLabel(p.sip_registration_status))}</Badge></div></td>
+          <td className="px-2 text-xs text-muted-foreground">{p.last_seen_at ? formatTime(p.last_seen_at) : tUi("never")}</td>
+          <td className="pr-3"><div className="flex justify-end gap-0.5">
+            <Button size="icon" variant="ghost" className="size-7" aria-label={tUi("Remote reboot")} title={tUi("Remote reboot")} disabled={rebooting} onClick={e => {e.stopPropagation();rebootPhones([p.id]);}}><IconPower className="size-3.5" /></Button>
+            <Button size="icon" variant="ghost" className="size-7" aria-label={p.provisioning_state === "disabled" ? tUi("Enable provisioning") : tUi("Disable provisioning")} title={p.provisioning_state === "disabled" ? tUi("Enable provisioning") : tUi("Disable provisioning")} onClick={e => {e.stopPropagation();togglePhoneState(p);}}>{p.provisioning_state === "disabled" ? <IconEye className="size-3.5" /> : <IconEyeOff className="size-3.5" />}</Button>
+            <Button size="icon" variant="ghost" className="size-7 text-destructive" aria-label={tUi("Delete")} title={tUi("Delete")} onClick={e => {e.stopPropagation();deletePhone(p);}}><IconTrash className="size-3.5" /></Button>
+          </div></td>
+        </tr>)}</tbody>
+      </table>}
+    </div>
+  </>;
 }
 
-function PhoneEditor({ draft, setDraft, editing, phone, valid, saving, bridges = [], availablePhoneNumbers = [], hardphoneConfig = {}, save, rebootPhones, rebooting = false }) {
+function PhoneEditor({ draft, setDraft, editing, phone, bridges = [], hardphoneConfig = {}, rebootPhones, rebooting = false, onExtensionSaved }) {
   const tUi = useUiText();
-  const [numberChangeOpen, setNumberChangeOpen] = useState(false);
   const update = (patch) => setDraft((d) => ({ ...d, ...patch }));
   const phoneAdminPasswordConfigured = hardphoneConfig.phoneAdminPasswordConfigured === true;
   const outboundVoiceProfileConfigured = hardphoneConfig.outboundVoiceProfileConfigured === true;
   const updateSettings = (patch) => setDraft((d) => ({ ...d, settings: normalizePhoneSettings({ ...(d.settings || {}), ...patch }, hardphoneConfig.userTimezone) }));
   const models = VENDOR_MODELS[draft.vendor] || [];
   const catalogEntry = modelCatalogEntry(draft.vendor, draft.model);
-  const numberOptions = useMemo(() => {
-    const options = [...availablePhoneNumbers];
-    if (draft.assigned_phone_number_id && draft.assigned_phone_number && !options.some((n) => n.id === draft.assigned_phone_number_id)) {
-      options.unshift({ id: draft.assigned_phone_number_id, phone_number: draft.assigned_phone_number, assigned: true });
-    }
-    return options;
-  }, [availablePhoneNumbers, draft.assigned_phone_number, draft.assigned_phone_number_id]);
-
-  useEffect(() => { setNumberChangeOpen(false); }, [phone?.id]);
 
   return (
     <>
@@ -1084,7 +863,7 @@ function PhoneEditor({ draft, setDraft, editing, phone, valid, saving, bridges =
           </div>
           <div>
             <Label>{tUi("MAC address")}<span aria-hidden="true" className="ml-1 text-red-500">*</span></Label>
-            <Input className="mt-1 font-mono" value={formatMacInput(draft.mac)} onChange={(e) => update({ mac: formatMacInput(e.target.value) })} placeholder={tUi("00:90:8f:56:10:a5")} disabled={editing} />
+            <Input className="mt-1 font-mono" value={formatMacInput(draft.mac)} onChange={(e) => update({ mac: formatMacInput(e.target.value) })} placeholder={tUi("00:90:8f:00:00:01")} disabled={editing} />
           </div>
           <div>
             <Label>{tUi("Vendor")}<span aria-hidden="true" className="ml-1 text-red-500">*</span></Label>
@@ -1108,33 +887,14 @@ function PhoneEditor({ draft, setDraft, editing, phone, valid, saving, bridges =
           <PhoneModelSettingsCard vendor={draft.vendor} model={draft.model} settings={normalizePhoneSettings(draft.settings)} updateSettings={updateSettings} draft={draft} update={update} bridges={bridges} />
           <div>
             <Label>{tUi("Line Label")}</Label>
-            <Input className="mt-1" value={draft.label} onChange={(e) => update({ label: e.target.value })} placeholder={tUi("Line 1 / Agent name")} />
+            <Input className="mt-1" id="phone-line-label" maxLength={draft.vendor === "yealink" ? 99 : 256} value={draft.label} onChange={(e) => update({ label: e.target.value })} placeholder={phone?.extension || tUi("Line 1 / Agent name")} />
+            <p className="mt-1.5 text-xs text-muted-foreground">{tUi("Defaults to the assigned extension. Enter a custom name to show it on the phone display instead; clear it to restore the extension.")}</p>
           </div>
           <div className="rounded-xl border bg-muted/20 p-3">
-            <Label>{tUi("Telnyx number")}</Label>
-            <div className="mt-1 flex items-center gap-2">
-              <div className="min-w-0 flex-1">
-                {editing && draft.assigned_phone_number && !numberChangeOpen ? (
-                  <Input className="font-mono" value={draft.assigned_phone_number} readOnly data-testid="hp-phone-number-readonly" />
-                ) : (
-                  <Select value={draft.assigned_phone_number_id || "none"} onValueChange={(v) => {
-                    const selected = numberOptions.find((n) => n.id === v);
-                    update({ assigned_phone_number_id: v === "none" ? "" : v, assigned_phone_number: selected?.phone_number || "" });
-                  }}>
-                    <SelectTrigger className="w-full" data-testid="hp-phone-number-select"><SelectValue placeholder={tUi("Select a Telnyx number")} /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">{tUi("No Telnyx number assigned")}</SelectItem>
-                      {numberOptions.map((n) => <SelectItem key={n.id} value={n.id}>{n.phone_number}{n.assigned ? tUi(" · current") : ""}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
-              {editing && draft.assigned_phone_number ? (
-                <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={() => setNumberChangeOpen(true)} disabled={numberChangeOpen} aria-label={tUi("Change Telnyx number")} title={tUi("Change Telnyx number")} data-testid="hp-phone-number-change">
-                  <IconRefresh className="h-4 w-4" />
-                </Button>
-              ) : null}
-            </div>
+            <OutboundNumberSelect id="hp-phone-number-select" endpoint="/api/admin/phones-provisioning/number-options"
+              label={tUi("Telnyx number")} value={draft.assigned_phone_number_id} number={draft.assigned_phone_number}
+              onChange={(id, number) => update({ assigned_phone_number_id: id, assigned_phone_number: number })}
+              description={tUi("Used for calls from this phone when no user is signed in. Signed-in users choose their own caller ID. Without a phone DID, the system Main From Number is used.")} />
           </div>
           {phoneAdminPasswordConfigured && outboundVoiceProfileConfigured ? null : (
             <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
@@ -1184,22 +944,17 @@ function PhoneEditor({ draft, setDraft, editing, phone, valid, saving, bridges =
         </SettingCard>
       ) : null}
 
+      {editing && phone ? <ExtensionAssignment type="phone" targetId={phone.id} onSaved={onExtensionSaved} /> : null}
+      {editing && (phone?.vendor === "polycom" || (phone?.vendor === "audiocodes" && ["420HD", "440HD"].includes(phone.model)) || (phone?.vendor === "yealink" && phone.model === "T22P")) ? <PolycomProvisioningCard key={phone.id} phone={phone} /> : null}
       {editing && phone ? <PhoneCtiCard phone={phone} /> : null}
 
-      <Button className="w-full" onClick={save} disabled={!valid || saving || (!editing && (!phoneAdminPasswordConfigured || !outboundVoiceProfileConfigured))} data-testid="hp-save-phone">
-        {saving ? <IconLoader2 className="mr-2 h-4 w-4 animate-spin" /> : <IconDeviceFloppy className="mr-2 h-4 w-4" />}
-        {editing ? tUi("Save phone") : tUi("Add phone")}
-      </Button>
-      {!valid ? (
-        <p className="text-xs text-amber-600 dark:text-amber-300">{tUi("Required: a valid 12-hex-digit MAC address and a vendor.")}</p>
-      ) : null}
     </>
   );
 }
 
 function PhoneModelSettingsCard({ vendor, model, settings, updateSettings, draft, update, bridges = [] }) {
   const tUi = useUiText();
-  const useBridge = settings.cti_mode === "local_bridge";
+  const useBridge = ["local_bridge", "desktop_bridge"].includes(settings.cti_mode);
   return (
     <div className="rounded-xl border bg-muted/20 p-3">
       <div className="mb-3 text-sm font-medium">{tUi("Context settings view")}{model ? tUi(" · {value0}", { value0: model }) : ""}</div>
@@ -1214,11 +969,17 @@ function PhoneModelSettingsCard({ vendor, model, settings, updateSettings, draft
             <SelectTrigger className="mt-1 w-full"><SelectValue placeholder={tUi("CTI mode")} /></SelectTrigger>
             <SelectContent>
               <SelectItem value="direct">{tUi("Direct phone API")}</SelectItem>
+              {vendor === "audiocodes" ? <SelectItem value="sip_controller">{tUi("Local SIP controller")}</SelectItem> : null}
+              {((vendor === "audiocodes" && ["420HD", "440HD"].includes(model)) || vendor === "polycom" || (vendor === "yealink" && model === "T22P")) ? <SelectItem value="desktop_bridge">Electron · {tUi("Local bridge")}</SelectItem> : null}
               <SelectItem value="local_bridge">{tUi("Local bridge")}</SelectItem>
               <SelectItem value="telnyx">{tUi("Telnyx fallback")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
+        {vendor === "audiocodes" && settings.cti_mode === "desktop_bridge" ? <>
+          <div><Label>{tUi("IP address")} · Electron</Label><Input className="mt-1" value={settings.sip_controller_host || ""} onChange={e=>updateSettings({sip_controller_host:e.target.value})} placeholder="192.168.1.20" /></div>
+          <div><Label>{tUi("Port")} · SIP TCP</Label><Input className="mt-1" type="number" min="1024" max="65535" value={settings.sip_controller_port || 5070} onChange={e=>updateSettings({sip_controller_port:e.target.value})} /></div>
+        </> : null}
         <div className="sm:col-span-2">
           <Label>{tUi("Local bridge")}</Label>
           <Select value={draft.local_bridge_id || "none"} onValueChange={(v) => update({ local_bridge_id: v === "none" ? "" : v })} disabled={!useBridge}>
@@ -1256,11 +1017,10 @@ function PhoneModelSettingsCard({ vendor, model, settings, updateSettings, draft
 
 function PhoneModelPreview({ vendor, model, catalogEntry }) {
   const tUi = useUiText();
-  const vendorLabel = VENDORS.find((v) => v.value === vendor)?.label || vendor;
   return (
     <div className="overflow-hidden rounded-xl border bg-muted/20">
-      <div className="aspect-[4/3] bg-[radial-gradient(circle_at_50%_35%,rgba(14,165,233,0.13),transparent_45%),linear-gradient(135deg,rgba(248,250,252,0.95),rgba(226,232,240,0.8))] p-3 dark:bg-[radial-gradient(circle_at_50%_35%,rgba(56,189,248,0.18),transparent_45%),linear-gradient(135deg,rgba(24,24,27,0.96),rgba(9,9,11,0.92))]">
-        <img src={catalogEntry.image} alt={`${vendorLabel} ${model}`} className="h-full w-full object-contain drop-shadow-sm dark:drop-shadow-[0_18px_28px_rgba(0,0,0,0.55)]" loading="lazy" />
+      <div className="aspect-[4/3] p-2">
+        <StationArtwork station={{ vendor, model, kind: "deskphone" }} size="preview" className="h-full w-full" />
       </div>
       <div className="border-t px-3 py-2">
         <div className="text-sm font-medium">{model}</div>
@@ -1476,12 +1236,12 @@ function PhoneCtiCard({ phone }) {
   const [ctiError, setCtiError] = useState("");
   const ringtoneRef = useRef(null);
 
-  const ctiMode = phone?.settings?.cti_mode === "local_bridge" ? `Local bridge (${phone.local_bridge_id || phone.settings?.local_bridge_id || "unassigned"})` : phone.vendor === "audiocodes" || phone?.settings?.cti_mode === "telnyx" ? "Telnyx Call Control" : phone.vendor === "polycom" ? "Polycom REST API" : "Yealink Action URI";
+  const ctiMode = phone?.settings?.cti_mode === "desktop_bridge" ? "Electron CTI bridge" : phone?.settings?.cti_mode === "sip_controller" ? "Local SIP controller" : phone?.settings?.cti_mode === "local_bridge" ? `Local bridge (${phone.local_bridge_id || phone.settings?.local_bridge_id || "unassigned"})` : phone.vendor === "audiocodes" || phone?.settings?.cti_mode === "telnyx" ? "Telnyx Call Control" : phone.vendor === "polycom" ? "Polycom REST API" : "Yealink Action URI";
   const reachableIp = phone.last_ip || phone.ip_address;
   const callInfo = useMemo(() => deriveCallInfo(lastStatus, phone), [lastStatus, phone]);
   const hasActiveCall = callInfo.hasCall;
   const fireAndForgetControls = phone.vendor === "yealink" && phone?.settings?.cti_mode !== "telnyx" && Boolean(reachableIp);
-  const telnyxFallbackControls = phone.vendor === "audiocodes" || phone?.settings?.cti_mode === "telnyx";
+  const telnyxFallbackControls = (phone.vendor === "audiocodes" && !["sip_controller","desktop_bridge"].includes(phone?.settings?.cti_mode)) || phone?.settings?.cti_mode === "telnyx";
   const canDial = (fireAndForgetControls || !hasActiveCall) && dialNumber.trim();
   const canAnswer = callInfo.isIncoming || fireAndForgetControls;
   const canHold = callInfo.isConnected || fireAndForgetControls;
@@ -1555,7 +1315,7 @@ function PhoneCtiCard({ phone }) {
       const res = await fetch(`${API}/phones/${phone.id}/cti`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, ...params }),
+        body: JSON.stringify({ action, callRef: (Array.isArray(lastStatus?.call) ? lastStatus.call[0] : lastStatus?.call)?.Ref, ...params }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || `${action} failed`);

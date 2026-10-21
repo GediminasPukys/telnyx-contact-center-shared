@@ -269,6 +269,27 @@ test("Phase C blind transfer finalizes the agent and keeps symmetric leg teardow
   assert.deepEqual(await checkInvariants(pool), {});
 });
 
+test("Native blind transfer releases the physical source only after the destination answers", { skip }, async () => {
+  const call = await activeCall();
+  const targetCcid = `v3:native-transfer-${randomUUID()}`;
+  const provider = makeFakeProvider([
+    { outcome: "accepted", response: { data: { call_control_id: targetCcid } } },
+    { outcome: "accepted", response: { data: { result: "ok" } } },
+  ]);
+  const { sagaId } = await withTx(tx => startBlindTransferSaga(tx, {
+    ...baseParams(call, "sip:controlled-target@test.invalid"),
+    nativePhone: true,
+  }));
+  await driveSaga(pool, sagaId, { provider });
+  assert.deepEqual(provider.calls.map(c => c.operation), ["blind_transfer"]);
+  assert.equal((await pool.query("SELECT state FROM acd_work_items WHERE id=$1",[call.workItem.id])).rows[0].state,"active");
+  await applySagaEvent(pool, { workItemId:call.workItem.id,name:"leg.answered",role:"transfer_target",provider });
+  assert.deepEqual(provider.calls.map(c => c.operation), ["blind_transfer","blind_transfer_release_native_source"]);
+  assert.equal(provider.calls[1].endpoint, `/calls/${encodeURIComponent(call.ids.agent)}/actions/hangup`);
+  assert.equal((await pool.query("SELECT ended_at FROM acd_legs WHERE provider_call_id=$1",[call.ids.agent])).rows[0].ended_at,null,"Command acceptance must not fabricate a physical hangup event");
+  assert.equal((await pool.query("SELECT step FROM acd_sagas WHERE id=$1",[sagaId])).rows[0].step,"monitor_transfer");
+});
+
 test("Phase C blind transfer hangs up the destination when the customer ends first", { skip }, async () => {
   const call = await activeCall();
   const targetCcid = `v3:target-${randomUUID()}`;

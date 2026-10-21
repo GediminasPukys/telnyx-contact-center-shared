@@ -10,6 +10,7 @@ test('hold and unhold send the registered device token and current generation', 
   let generation='7', rejected=false;
   const calls=[];
   globalThis.fetch=async (url, options={})=>{
+    if(url==='/api/telephony/stations')return Response.json({choice:{kind:'webrtc'}});
     if(url.endsWith('/voice-endpoints'))return Response.json({endpointId:'web',generation,endpoints:[],registration:{id:'web',token:'test-token'}});
     calls.push({url,options});
     assert.equal(options.headers.get('X-CC-Endpoint-Token'),'test-token');

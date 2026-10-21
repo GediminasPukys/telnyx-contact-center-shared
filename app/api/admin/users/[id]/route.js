@@ -112,6 +112,7 @@ async function PUT_handler(request, { params }, authz) {
     "verified",
     body.verified != null ? Boolean(body.verified) : undefined
   );
+  maybeSet("headsetControlsEnabled", typeof body.headsetControlsEnabled === "boolean" ? body.headsetControlsEnabled : undefined);
   maybeSet("active", body.active != null ? Boolean(body.active) : undefined);
   maybeSet(
     "experimentalFeatures",

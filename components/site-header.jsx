@@ -8,6 +8,8 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import SoftphoneMini from "@/components/softphone-mini";
+import { usePhoneChoice } from "@/components/telephony/use-phone-choice";
+import StationPhoneMenu from "@/components/telephony/StationPhoneMenu";
 import IncomingInteractionAlert from "@/components/contact-center/IncomingInteractionAlert";
 import { StatusSelector } from "@/components/contact-center/StatusSelector";
 import { QueueActivationPanel } from "@/components/contact-center/QueueActivationPanel";
@@ -22,6 +24,7 @@ import { IconBook2 } from "@tabler/icons-react";
 
 export function SiteHeader() {
   const tUi = useUiText();
+  const phoneChoice = usePhoneChoice();
   const [status, setStatus] = useState(DEFAULT_USER_STATUS);
   // Manual status chosen while busy; applies once the current interactions end.
   const statusVersion = useRef(null);
@@ -305,7 +308,7 @@ export function SiteHeader() {
               <Separator orientation="vertical" className="h-6" />
             </>
           )}
-          <SoftphoneMini />
+          {phoneChoice?.kind !== "none" ? <SoftphoneMini /> : <StationPhoneMenu />}
         </div>
       </div>
     </header>

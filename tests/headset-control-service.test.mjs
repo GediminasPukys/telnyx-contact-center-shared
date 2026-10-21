@@ -1,933 +1,217 @@
-import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { createHeadsetControlService, normalizeSoftphoneState } from '../lib/headsets/headset-control-service.mjs';
+import { fakeAdapter, tick, jabraFixture, eposFixture } from './helpers/headset-fixtures.mjs';
 
-import {
-  createHeadsetControlService,
-  HEADSET_COMMANDS,
-  normalizeSoftphoneState,
-} from "../lib/headsets/headset-control-service.mjs";
-import { createJabraAdapter } from "../lib/headsets/adapters/jabra-adapter.mjs";
-import { createEposAdapter } from "../lib/headsets/adapters/epos-adapter.mjs";
-
-describe("headset control service", () => {
-  it("normalizes softphone state before sending it to active adapters", async () => {
-    const sent = [];
-    const adapter = {
-      vendor: "jabra",
-      async init() {},
-      async dispose() {},
-      async setSoftphoneState(state) {
-        sent.push(state);
-      },
-      onCommand() {
-        return () => {};
-      },
-      onDeviceChange() {
-        return () => {};
-      },
-    };
-
-    const service = createHeadsetControlService({ adapters: [adapter] });
-    await service.init();
-    await service.setSoftphoneState({
-      callId: 123,
-      direction: "incoming",
-      ringing: 1,
-      active: "yes",
-      muted: 0,
-      held: undefined,
-      remoteDisplayName: " Alice ",
-      remoteNumber: "+15551234567",
-    });
-
-    assert.deepEqual(sent, [{
-      callId: "123",
-      direction: "incoming",
-      ringing: true,
-      active: true,
-      muted: false,
-      held: false,
-      remoteDisplayName: "Alice",
-      remoteNumber: "+15551234567",
-    }]);
-  });
-
-  it("deduplicates repeated headset commands within the debounce window", async () => {
-    const emitted = [];
-    let commandHandler = null;
-    const adapter = {
-      vendor: "epos",
-      async init() {},
-      async dispose() {},
-      async setSoftphoneState() {},
-      onCommand(cb) {
-        commandHandler = cb;
-        return () => {};
-      },
-      onDeviceChange() {
-        return () => {};
-      },
-    };
-
-    const service = createHeadsetControlService({ adapters: [adapter], now: () => 1000, debounceMs: 500 });
-    service.onCommand((command) => emitted.push(command));
-    await service.init();
-
-    commandHandler({ type: HEADSET_COMMANDS.MUTE, muted: true, source: "headset" });
-    commandHandler({ type: HEADSET_COMMANDS.MUTE, muted: true, source: "headset" });
-
-    assert.equal(emitted.length, 1);
-    assert.deepEqual(emitted[0], { type: "mute", muted: true, source: "headset", vendor: "epos" });
-  });
-
-  it("keeps other headset adapters available when one vendor fails to initialize", async () => {
-    const initCalls = [];
-    const warn = console.warn;
-    console.warn = () => {};
-    try {
-      const jabra = {
-        vendor: "jabra",
-        async init() { initCalls.push("jabra"); },
-        onCommand() { return () => {}; },
-        onDeviceChange() { return () => {}; },
-      };
-      const epos = {
-        vendor: "epos",
-        async init() { initCalls.push("epos"); throw new Error("EPOS Connect unavailable"); },
-        onCommand() { return () => {}; },
-        onDeviceChange() { return () => {}; },
-      };
-
-      const service = createHeadsetControlService({ adapters: [jabra, epos] });
-      await service.init();
-      await service.init();
-
-      assert.deepEqual(initCalls, ["jabra", "epos", "epos"]);
-    } finally {
-      console.warn = warn;
-    }
-  });
-
-  it("keeps set mute/hold actions idempotent instead of exposing only toggles", () => {
-    assert.deepEqual(normalizeSoftphoneState({ muted: true, held: true }), {
-      callId: null,
-      direction: null,
-      ringing: false,
-      active: false,
-      muted: true,
-      held: true,
-      remoteDisplayName: null,
-      remoteNumber: null,
-    });
-  });
-
-  it("does not let one adapter's disconnect clear another adapter's connected device", async () => {
-    const emitted = [];
-    let eposDeviceChange;
-    let jabraDeviceChange;
-    const epos = {
-      vendor: "epos",
-      async init() {},
-      onCommand() { return () => {}; },
-      onDeviceChange(callback) { eposDeviceChange = callback; return () => {}; },
-    };
-    const jabra = {
-      vendor: "jabra",
-      async init() {},
-      onCommand() { return () => {}; },
-      onDeviceChange(callback) { jabraDeviceChange = callback; return () => {}; },
-    };
-
-    const service = createHeadsetControlService({ adapters: [epos, jabra] });
-    service.onDeviceChange((device) => emitted.push(device));
-    await service.init();
-
-    eposDeviceChange({ vendor: "epos", model: "Sennheiser BTD 800 USB for Lync", connectionState: "connected" });
-    jabraDeviceChange(null);
-
-    assert.equal(service.getDevice().model, "Sennheiser BTD 800 USB for Lync");
-    assert.equal(emitted.at(-1).model, "Sennheiser BTD 800 USB for Lync");
-  });
-
-  it("forwards adapter diagnostics without changing the selected device", async () => {
-    const diagnostics = [];
-    let diagnosticHandler;
-    const adapter = {
-      vendor: "epos",
-      async init() {},
-      onCommand() { return () => {}; },
-      onDeviceChange() { return () => {}; },
-      onDiagnostic(callback) { diagnosticHandler = callback; return () => {}; },
-    };
-
-    const service = createHeadsetControlService({ adapters: [adapter] });
-    service.onDiagnostic((diagnostic) => diagnostics.push(diagnostic));
-    await service.init();
-
-    diagnosticHandler({ message: "EPOS HeadsetDisconnected notification", level: "warn" });
-
-    assert.deepEqual(diagnostics, [{ message: "EPOS HeadsetDisconnected notification", level: "warn", vendor: "epos" }]);
-    assert.equal(service.getDevice(), null);
-  });
+async function serviceFixture(t) {
+  const a = fakeAdapter(), b = fakeAdapter('epos');
+  const service = createHeadsetControlService({ adapters: [a, b], operationTimeoutMs: 25 });
+  t.after(() => service.dispose()); await service.init(); a.devices([{}]); b.devices([{}]);
+  return { a, b, service };
+}
+test('no implicit selection or state fanout; nonselected controls cannot act on a call', async t => {
+  const { a, b, service } = await serviceFixture(t); const commands = []; service.onCommand(c => commands.push(c));
+  await service.setSoftphoneState({}); assert.equal(a.sent.length + b.sent.length, 0);
+  await service.selectDevice('jabra:a');
+  await service.setSoftphoneState({ callId: 'c1', active: true });
+  b.command({ type: 'mute', muted: true }); a.command({ type: 'mute', muted: true }); await tick();
+  assert.equal(b.sent.length, 0); assert.equal(commands.length, 1); assert.equal(commands[0].vendor, 'jabra');
+});
+test('normalizes call IDs and values', () => {
+  assert.deepEqual(normalizeSoftphoneState({ callId: 7, active: 1, muted: false, remoteDisplayName: ' Alice ' }), { callId: '7', active: true, ringing: false, muted: false, held: false, direction: null, remoteDisplayName: 'Alice', remoteNumber: null });
+});
+test('dedupes duplicate events but preserves rapid mute/unmute intent', async t => {
+  const { a, service } = await serviceFixture(t); const commands = []; service.onCommand(c => commands.push(c));
+  await service.selectDevice('jabra:a'); await service.setSoftphoneState({ callId: 'c1', active: true });
+  a.command({ type: 'mute', muted: true }); a.command({ type: 'mute', muted: true }); a.command({ type: 'mute', muted: false });
+  await tick(); assert.deepEqual(commands.map(c => c.muted), [true, false]);
+});
+test('stale call and stale device events are fenced, including a queued command', async t => {
+  const { a, service } = await serviceFixture(t); const commands = []; service.onCommand(c => commands.push(c));
+  await service.selectDevice('jabra:a'); await service.setSoftphoneState({ callId: 'c1', active: true });
+  a.command({ type: 'hangup', callId: 'old' }); a.command({ type: 'hangup', deviceId: 'other' });
+  a.command({ type: 'hangup' }); await service.setSoftphoneState({ callId: 'c2', active: true }); await tick();
+  assert.equal(commands.length, 0);
+});
+test('selection and destructive test actions are unavailable during an outgoing attempt', async t => {
+  const { service } = await serviceFixture(t); await service.selectDevice('jabra:a');
+  await service.setSoftphoneState({ callId: 'dialing', direction: 'outgoing' });
+  await assert.rejects(service.selectDevice('epos:a'), /Finish/); await assert.rejects(service.sendTestCommand('ring'), /no call/);
+});
+test('audio-only EPOS enumeration cannot be selected for controls', async t => {
+  const { b, service } = await serviceFixture(t); b.devices([{ connectionState: 'audio-only', controlReady: false }]);
+  await assert.rejects(service.selectDevice('epos:a'), /not ready/);
+});
+test('inactive vendor disconnect never clears selected device; same-device reconnect restores current state', async t => {
+  const { a, b, service } = await serviceFixture(t); await service.selectDevice('jabra:a');
+  await service.setSoftphoneState({ callId: 'c1', active: true, muted: true });
+  b.devices([]); assert.equal(service.getDevice().vendor, 'jabra');
+  a.devices([]); assert.equal(service.getSnapshot().sync, 'disconnected');
+  a.devices([{}]); await tick(); assert.equal(service.getSnapshot().sync, 'synced'); assert.equal(a.sent.at(-1).muted, true);
+});
+test('a saved explicit choice restores only the same device and replays an already ringing call', async t => {
+  const a = fakeAdapter(), b = fakeAdapter('epos');
+  const service = createHeadsetControlService({ adapters: [a, b], initialSelectedKey: 'epos:saved' });
+  t.after(() => service.dispose()); await service.init();
+  await service.setSoftphoneState({ callId: 'incoming', ringing: true });
+  a.devices([{}]); b.devices([{}]); await tick();
+  assert.equal(service.getDevice(), null); assert.equal(a.sent.length + b.sent.length, 0);
+  b.devices([{ id: 'saved' }]); await tick();
+  assert.equal(service.getSnapshot().sync, 'synced'); assert.deepEqual(b.selected, ['saved']);
+  assert.equal(b.sent.at(-1).callId, 'incoming'); assert.equal(b.sent.at(-1).ringing, true);
+});
+test('disconnect during saved-device restoration cannot publish a false synchronized state', async t => {
+  const a = fakeAdapter(); let finishSelection;
+  a.setSelectedDevice = () => new Promise(resolve => { finishSelection = resolve; });
+  const service = createHeadsetControlService({ adapters: [a], initialSelectedKey: 'jabra:a' });
+  t.after(() => service.dispose()); await service.init(); a.devices([{}]); await tick();
+  a.devices([]); finishSelection(); await tick();
+  assert.equal(service.getSnapshot().sync, 'disconnected'); assert.equal(a.sent.length, 0);
+});
+test('sync errors are visible and a later update retries; failed init does not block another vendor', async t => {
+  const { a, service } = await serviceFixture(t); await service.selectDevice('jabra:a');
+  a.setSoftphoneState = async () => { throw new Error('write failed'); };
+  await service.setSoftphoneState({ callId: 'c1', active: true }); assert.equal(service.getSnapshot().sync, 'error');
+  a.setSoftphoneState = async () => {}; await service.setSoftphoneState({ callId: 'c1', active: true }); assert.equal(service.getSnapshot().sync, 'synced');
+  const bad = fakeAdapter('poly'); bad.init = async () => { throw new Error('missing'); };
+  const good = fakeAdapter(); let inits = 0; good.init = async () => { inits++; };
+  const isolated = createHeadsetControlService({ adapters: [bad, good] }); await isolated.init(); await isolated.init(); assert.equal(inits, 1); await isolated.dispose();
+});
+test('queued old state snapshots cannot overwrite a newer call', async t => {
+  const { a, service } = await serviceFixture(t); await service.selectDevice('jabra:a'); a.sent.length = 0;
+  await Promise.all([service.setSoftphoneState({ callId: 'old', ringing: true }), service.setSoftphoneState({ callId: 'new', active: true })]);
+  assert.deepEqual(a.sent.map(s => s.callId), ['new']);
+});
+test('revoke/dispose fences commands and preserves the WebRTC call', async t => {
+  const { a, service } = await serviceFixture(t); let commands = 0; service.onCommand(() => commands++);
+  await service.selectDevice('jabra:a'); await service.setSoftphoneState({ callId: 'c1', active: true });
+  a.command({ type: 'hangup' }); await service.setEnabled(false); await tick(); assert.equal(commands, 0);
+  await service.dispose(); a.command({ type: 'answer' }); assert.equal(commands, 0);
 });
 
-describe("Jabra adapter contract", () => {
-  it("uses Jabra Easy Call Control multi-call semantics and WebHID pairing hook", async () => {
-    const calls = [];
-    let resolveIncomingCall;
-    const fakeMultiCallControl = {
-      signalIncomingCall: (timeout) => {
-        calls.push(["signalIncomingCall", timeout]);
-        return new Promise((resolve) => { resolveIncomingCall = resolve; });
-      },
-      acceptIncomingCall: async () => { calls.push(["acceptIncomingCall"]); resolveIncomingCall?.(true); },
-      rejectIncomingCall: async () => { calls.push(["rejectIncomingCall"]); resolveIncomingCall?.(false); },
-      startCall: async () => calls.push(["startCall"]),
-      endCall: async () => calls.push(["endCall"]),
-      mute: async () => calls.push(["mute"]),
-      unmute: async () => calls.push(["unmute"]),
-      hold: async () => calls.push(["hold"]),
-      resume: async () => calls.push(["resume"]),
-      ongoingCalls: { subscribe() { return { unsubscribe() {} }; } },
-      muteState: { subscribe() { return { unsubscribe() {} }; } },
-      holdState: { subscribe() { return { unsubscribe() {} }; } },
-      swapRequest: { subscribe() { return { unsubscribe() {} }; } },
-    };
-    const fakeJabra = {
-      RequestedBrowserTransport: { CHROME_EXTENSION_WITH_WEB_HID_FALLBACK: "transport" },
-      async createApi(config) {
-        calls.push(["createApi", config.transport, config.appId, config.appName]);
-        return {
-          transportContext: "chrome-extension",
-          deviceAdded: { subscribe(cb) { cb({ name: "Jabra Engage 50", productId: 1, serialNumber: "SN1" }); return { unsubscribe() {} }; } },
-          deviceRemoved: { subscribe() { return { unsubscribe() {} }; } },
-          async start() { calls.push(["start"]); },
-        };
-      },
-      EasyCallControlFactory: class {
-        supportsEasyCallControl() { return true; }
-        async createMultiCallControl() { calls.push(["createMultiCallControl"]); return fakeMultiCallControl; }
-      },
-      async webHidPairing() { calls.push(["webHidPairing"]); },
-    };
-
-    const adapter = createJabraAdapter({ jabra: fakeJabra, partnerKey: "pk", appId: "telnyx-cc", appName: "Telnyx Contact Center", incomingRingTimeoutMs: 45000 });
-    await adapter.init();
-    await adapter.requestPermission();
-    await adapter.setSoftphoneState({ ringing: true, muted: false, held: false, active: false });
-    await adapter.setSoftphoneState({ ringing: false, muted: true, held: true, active: true });
-    await adapter.setSoftphoneState({ ringing: false, muted: false, held: false, active: true });
-    await adapter.setSoftphoneState({ ringing: false, muted: false, held: false, active: false });
-    await adapter.setSoftphoneState({ direction: "outgoing", ringing: false, active: true });
-    await adapter.setSoftphoneState({ direction: "outgoing", ringing: false, active: false });
-    await adapter.setSoftphoneState({ direction: "incoming", ringing: true, active: false });
-    await adapter.setSoftphoneState({ direction: "incoming", ringing: false, active: false });
-
-    assert.deepEqual(calls, [
-      ["createApi", "transport", "telnyx-cc", "Telnyx Contact Center"],
-      ["createMultiCallControl"],
-      ["start"],
-      ["webHidPairing"],
-      ["signalIncomingCall", 45000],
-      ["acceptIncomingCall"],
-      ["mute"],
-      ["hold"],
-      ["unmute"],
-      ["resume"],
-      ["endCall"],
-      ["startCall"],
-      ["endCall"],
-      ["signalIncomingCall", 45000],
-      ["rejectIncomingCall"],
-    ]);
-  });
-
-  it("maps Jabra string enums and emits answer plus physical hangup", async () => {
-    const calls = [];
-    const emitted = [];
-    let resolveIncomingCall;
-    let emitMute;
-    let emitHold;
-    let emitOngoingCalls;
-    const incomingCallResult = new Promise((resolve) => { resolveIncomingCall = resolve; });
-    const fakeMultiCallControl = {
-      signalIncomingCall: (timeout) => { calls.push(["signalIncomingCall", timeout]); return incomingCallResult; },
-      endCall: async () => calls.push(["endCall"]),
-      mute: async () => calls.push(["mute"]),
-      unmute: async () => calls.push(["unmute"]),
-      hold: async () => calls.push(["hold"]),
-      resume: async () => calls.push(["resume"]),
-      muteState: { subscribe(cb) { emitMute = cb; return { unsubscribe() {} }; } },
-      holdState: { subscribe(cb) { emitHold = cb; return { unsubscribe() {} }; } },
-      ongoingCalls: { subscribe(cb) { emitOngoingCalls = cb; return { unsubscribe() {} }; } },
-      swapRequest: { subscribe() { return { unsubscribe() {} }; } },
-    };
-    const fakeJabra = {
-      RequestedBrowserTransport: { CHROME_EXTENSION_WITH_WEB_HID_FALLBACK: "transport" },
-      async createApi() {
-        return {
-          transportContext: "chrome-extension",
-          deviceAdded: { subscribe(cb) { cb({ name: "Jabra Engage 50", productId: 1, serialNumber: "SN1" }); return { unsubscribe() {} }; } },
-          deviceRemoved: { subscribe() { return { unsubscribe() {} }; } },
-        };
-      },
-      EasyCallControlFactory: class {
-        supportsEasyCallControl() { return true; }
-        async createMultiCallControl() { return fakeMultiCallControl; }
-      },
-    };
-
-    const adapter = createJabraAdapter({ jabra: fakeJabra, incomingRingTimeoutMs: 45000 });
-    adapter.onCommand((command) => emitted.push(command));
-    await adapter.init();
-    await adapter.setSoftphoneState({ ringing: true, active: false });
-
-    resolveIncomingCall(true);
-    await incomingCallResult;
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    await adapter.setSoftphoneState({ ringing: false, active: true });
-    emitMute("unmuted");
-    emitHold("not-on-hold");
-    emitMute("muted");
-    emitHold("on-hold");
-    emitOngoingCalls(1);
-    emitOngoingCalls(0);
-
-    assert.deepEqual(calls, [["signalIncomingCall", 45000]]);
-    assert.deepEqual(emitted, [
-      { type: HEADSET_COMMANDS.ANSWER, source: "headset" },
-      { type: HEADSET_COMMANDS.MUTE, muted: false, source: "headset" },
-      { type: HEADSET_COMMANDS.HOLD, held: false, source: "headset" },
-      { type: HEADSET_COMMANDS.MUTE, muted: true, source: "headset" },
-      { type: HEADSET_COMMANDS.HOLD, held: true, source: "headset" },
-      { type: HEADSET_COMMANDS.HANGUP, source: "headset" },
-    ]);
-  });
-
-  it("emits a Jabra reject command when the headset rejects an incoming call", async () => {
-    const emitted = [];
-    let resolveIncomingCall;
-    const incomingCallResult = new Promise((resolve) => { resolveIncomingCall = resolve; });
-    const fakeMultiCallControl = {
-      signalIncomingCall: () => incomingCallResult,
-      ongoingCalls: { subscribe() { return { unsubscribe() {} }; } },
-      muteState: { subscribe() { return { unsubscribe() {} }; } },
-      holdState: { subscribe() { return { unsubscribe() {} }; } },
-      swapRequest: { subscribe() { return { unsubscribe() {} }; } },
-    };
-    const fakeJabra = {
-      RequestedBrowserTransport: { CHROME_EXTENSION_WITH_WEB_HID_FALLBACK: "transport" },
-      async createApi() {
-        return {
-          transportContext: "chrome-extension",
-          deviceAdded: { subscribe(cb) { cb({ name: "Jabra Engage 50", productId: 1, serialNumber: "SN1" }); return { unsubscribe() {} }; } },
-          deviceRemoved: { subscribe() { return { unsubscribe() {} }; } },
-        };
-      },
-      EasyCallControlFactory: class {
-        supportsEasyCallControl() { return true; }
-        async createMultiCallControl() { return fakeMultiCallControl; }
-      },
-    };
-
-    const adapter = createJabraAdapter({ jabra: fakeJabra });
-    adapter.onCommand((command) => emitted.push(command));
-    await adapter.init();
-    await adapter.setSoftphoneState({ ringing: true, active: false });
-
-    resolveIncomingCall(false);
-    await incomingCallResult;
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    assert.deepEqual(emitted, [{ type: HEADSET_COMMANDS.REJECT, source: "headset" }]);
-  });
+test('Jabra publishes a device inventory and losing a different device preserves active control', async t => {
+  const f = jabraFixture(); t.after(() => f.adapter.dispose()); await f.adapter.init(); await f.adapter.setSelectedDevice('a');
+  f.api.deviceAdded.emit({ name: 'Second', serialNumber: 'b' }); f.api.deviceRemoved.emit({ serialNumber: 'b' });
+  assert.equal(f.adapter.getDevice().id, 'a'); await f.adapter.setSoftphoneState({ callId: 'c1', active: true }); assert.ok(f.calls.some(c => c[0] === 'start'));
+});
+test('Jabra GUI state uses incoming/active/mute/hold/end; own synchronous events are not actions', async t => {
+  const f = jabraFixture(); const commands = []; t.after(() => f.adapter.dispose()); f.adapter.onCommand(c => commands.push(c));
+  f.api.transportContext = 'web-hid';
+  await f.adapter.init(); await f.adapter.setSelectedDevice('a'); await f.adapter.requestPermission();
+  await f.adapter.setSoftphoneState({ callId: 'c1', ringing: true });
+  await f.adapter.setSoftphoneState({ callId: 'c1', active: true, muted: true, held: true });
+  await f.adapter.setSoftphoneState({ callId: 'c1', active: true }); await f.adapter.setSoftphoneState({}); await tick();
+  assert.deepEqual(f.calls.map(c => c[0]), ['pair', 'ring', 'accept', 'mute', 'hold', 'resume', 'unmute', 'end']); assert.equal(commands.length, 0);
+});
+test('Jabra hardware answer, mute, hold and hangup are mapped with call identity', async t => {
+  const f = jabraFixture(), commands = []; t.after(() => f.adapter.dispose()); f.adapter.onCommand(c => commands.push(c));
+  await f.adapter.init(); await f.adapter.setSelectedDevice('a'); await f.adapter.setSoftphoneState({ callId: 'c1', ringing: true });
+  f.rings[0](true); await tick();
+  await f.adapter.setSoftphoneState({ callId: 'c1', active: true });
+  f.control.muteState.emit('muted'); f.control.holdState.emit('on-hold'); f.control.ongoingCalls.emit(1); f.control.ongoingCalls.emit(0);
+  assert.deepEqual(commands.map(c => c.type), ['answer', 'mute', 'hold', 'hangup']); assert.ok(commands.every(c => c.callId === 'c1' && c.deviceId === 'a'));
+});
+test('Jabra rejects from hardware but ignores stale ringing resolution after call replacement', async t => {
+  const f = jabraFixture(), commands = []; t.after(() => f.adapter.dispose()); f.adapter.onCommand(c => commands.push(c));
+  await f.adapter.init(); await f.adapter.setSelectedDevice('a'); await f.adapter.setSoftphoneState({ callId: 'c1', ringing: true });
+  f.rings[0](false); await tick(); assert.equal(commands[0].type, 'reject'); commands.length = 0;
+  await f.adapter.setSoftphoneState({ callId: 'c2', ringing: true }); const stale = f.rings.at(-1);
+  await f.adapter.setSoftphoneState({ callId: 'c3', ringing: true }); stale(true); await tick(); assert.equal(commands.length, 0);
+});
+test('Jabra partial failure does not start a second hardware call on retry', async t => {
+  const f = jabraFixture(); t.after(() => f.adapter.dispose()); await f.adapter.init(); await f.adapter.setSelectedDevice('a');
+  const mute = f.control.mute; f.control.mute = async () => { throw new Error('USB busy'); };
+  await assert.rejects(f.adapter.setSoftphoneState({ callId: 'c1', active: true, muted: true }), /USB busy/);
+  f.control.mute = mute; await f.adapter.setSoftphoneState({ callId: 'c1', active: true, muted: true }); assert.equal(f.calls.filter(c => c[0] === 'start').length, 1);
+});
+test('Jabra disconnect removes subscriptions and emits unavailable control', async t => {
+  const f = jabraFixture(); t.after(() => f.adapter.dispose()); await f.adapter.init(); await f.adapter.setSelectedDevice('a');
+  f.control.onDisconnect.emit(); assert.equal(f.adapter.getDevice().controlReady, false); assert.equal(f.control.muteState.count, 0);
 });
 
-describe("EPOS adapter contract", () => {
-  it("surfaces EPOS service-ready and service-missing states instead of silently hiding websocket failures", async () => {
-    const devices = [];
-    class FailingWebSocket {
-      constructor() {
-        this.readyState = 0;
-        queueMicrotask(() => this.onerror?.(new Error("connection refused")));
-      }
-      send() {}
-      close() {}
-    }
-
-    const adapter = createEposAdapter({
-      WebSocketImpl: FailingWebSocket,
-      url: "wss://127.0.0.1:41088",
-      reconnectDelayMs: 0,
-    });
-    adapter.onDeviceChange((device) => devices.push(device));
-    await adapter.init();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    await adapter.dispose();
-
-    assert.equal(devices.at(-1).connectionState, "service-missing");
-  });
-
-  it("follows the documented EPOS websocket handshake before login", async () => {
-    const sent = [];
-    let socket;
-    class FakeWebSocket {
-      constructor() {
-        socket = this;
-        this.readyState = 0;
-        queueMicrotask(() => {
-          this.readyState = 1;
-          this.onopen?.();
-        });
-      }
-      send(payload) {
-        sent.push(JSON.parse(payload));
-      }
-      close() {}
-    }
-
-    const adapter = createEposAdapter({ WebSocketImpl: FakeWebSocket, url: "wss://127.0.0.1:41088", softphoneName: "Telnyx Contact Center" });
-    await adapter.init();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    assert.deepEqual(sent, []);
-
-    socket.onmessage?.({ data: JSON.stringify({ Event: "SocketConnected", EventType: "Notification", ReturnCode: 0 }) });
-    assert.deepEqual(sent.map((message) => message.Event), ["EstablishConnection"]);
-    assert.equal(sent[0].SPName, "Telnyx Contact Center");
-    assert.equal(sent[0].RedialSupport, "No");
-    assert.equal(sent[0].OffHookSupport, "Yes");
-    assert.equal(sent[0].DNDOption, "No");
-
-    socket.onmessage?.({ data: JSON.stringify({ Event: "EstablishConnection", EventType: "Acknowledgement", ReturnCode: 0 }) });
-    assert.deepEqual(sent.map((message) => message.Event), ["EstablishConnection", "SPLoggedIn"]);
-  });
-
-  it("does not continue the EPOS handshake after a rejected acknowledgement", async () => {
-    const sent = [];
-    const diagnostics = [];
-    let socket;
-    class FakeWebSocket {
-      constructor() {
-        socket = this;
-        this.readyState = 1;
-        queueMicrotask(() => this.onopen?.());
-      }
-      send(payload) { sent.push(JSON.parse(payload)); }
-      close() {}
-    }
-
-    const adapter = createEposAdapter({ WebSocketImpl: FakeWebSocket, reconnectDelayMs: 0 });
-    adapter.onDiagnostic((diagnostic) => diagnostics.push(diagnostic));
-    await adapter.init();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    socket.onmessage?.({ data: JSON.stringify({ Event: "SocketConnected", EventType: "Notification", ReturnCode: 0 }) });
-    socket.onmessage?.({ data: JSON.stringify({ Event: "EstablishConnection", EventType: "Acknowledgement", ReturnCode: 7 }) });
-
-    assert.deepEqual(sent.map((message) => message.Event), ["EstablishConnection"]);
-    assert.equal(diagnostics.some((item) => item.level === "error" && /rejected/.test(item.message)), true);
-  });
-
-  it("sends SDK-service websocket messages for call, mute, hold, and resume state after handshake", async () => {
-    const sent = [];
-    let socket;
-    class FakeWebSocket {
-      constructor() {
-        socket = this;
-        this.readyState = 0;
-        queueMicrotask(() => {
-          this.readyState = 1;
-          this.onopen?.();
-        });
-      }
-      send(payload) {
-        sent.push(JSON.parse(payload));
-      }
-      close() {}
-    }
-
-    const adapter = createEposAdapter({ WebSocketImpl: FakeWebSocket, url: "wss://127.0.0.1:41088", softphoneName: "Telnyx Contact Center" });
-    await adapter.init();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    socket.onmessage?.({ data: JSON.stringify({ Event: "SocketConnected", EventType: "Notification", ReturnCode: 0 }) });
-    socket.onmessage?.({ data: JSON.stringify({ Event: "EstablishConnection", EventType: "Acknowledgement", ReturnCode: 0 }) });
-    socket.onmessage?.({ data: JSON.stringify({ Event: "SPLoggedIn", EventType: "Acknowledgement", ReturnCode: 0 }) });
-
-    await adapter.setSoftphoneState({ callId: "call-1", direction: "incoming", ringing: true, active: false, muted: false, held: false });
-    await adapter.setSoftphoneState({ callId: "call-1", direction: "incoming", ringing: false, active: true, muted: true, held: true });
-    await adapter.setSoftphoneState({ callId: "call-1", direction: "incoming", ringing: false, active: true, muted: false, held: false });
-    await adapter.setSoftphoneState({ callId: "call-1", direction: null, ringing: false, active: false, muted: false, held: false });
-
-    assert.deepEqual(sent.map((message) => message.Event), [
-      "EstablishConnection",
-      "SPLoggedIn",
-      "SystemInformation",
-      "ActiveDeviceChanged",
-      "IncomingCall",
-      "InCallAccepted",
-      "MuteHeadset",
-      "CallHold",
-      "UnmuteHeadset",
-      "HeldCallResumed",
-      "HeldCallResumed",
-      "UnmuteHeadset",
-      "CallEnded",
-    ]);
-    assert.equal(sent[4].CallID, "call-1");
-    assert.equal(sent[6].CallID, "call-1");
-    assert.equal(sent[10].CallID, "call-1");
-  });
-
-  it("queues EPOS softphone state until the login acknowledgement completes", async () => {
-    const sent = [];
-    let socket;
-    class FakeWebSocket {
-      constructor() {
-        socket = this;
-        this.readyState = 0;
-        queueMicrotask(() => {
-          this.readyState = 1;
-          this.onopen?.();
-        });
-      }
-      send(payload) {
-        sent.push(JSON.parse(payload));
-      }
-      close() {}
-    }
-
-    const adapter = createEposAdapter({ WebSocketImpl: FakeWebSocket, url: "wss://127.0.0.1:41088", softphoneName: "Telnyx Contact Center" });
-    await adapter.init();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    await adapter.setSoftphoneState({ callId: "call-queued", direction: "incoming", ringing: true, active: false, muted: false, held: false });
-    socket.onmessage?.({ data: JSON.stringify({ Event: "SocketConnected", EventType: "Notification", ReturnCode: 0 }) });
-    socket.onmessage?.({ data: JSON.stringify({ Event: "EstablishConnection", EventType: "Acknowledgement", ReturnCode: 0 }) });
-
-    assert.deepEqual(sent.map((message) => message.Event), ["EstablishConnection", "SPLoggedIn"]);
-
-    socket.onmessage?.({ data: JSON.stringify({ Event: "SPLoggedIn", EventType: "Acknowledgement", ReturnCode: 0 }) });
-
-    assert.deepEqual(sent.map((message) => message.Event), ["EstablishConnection", "SPLoggedIn", "SystemInformation", "ActiveDeviceChanged", "IncomingCall"]);
-    assert.equal(sent[4].CallID, "call-queued");
-  });
-
-  it("uses the EPOS OutgoingCall event for connected outbound softphone calls", async () => {
-    const sent = [];
-    let socket;
-    class FakeWebSocket {
-      constructor() {
-        socket = this;
-        this.readyState = 0;
-        queueMicrotask(() => {
-          this.readyState = 1;
-          this.onopen?.();
-        });
-      }
-      send(payload) {
-        sent.push(JSON.parse(payload));
-      }
-      close() {}
-    }
-
-    const adapter = createEposAdapter({ WebSocketImpl: FakeWebSocket, url: "wss://127.0.0.1:41088", softphoneName: "Telnyx Contact Center" });
-    await adapter.init();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    socket.onmessage?.({ data: JSON.stringify({ Event: "SocketConnected", EventType: "Notification", ReturnCode: 0 }) });
-    socket.onmessage?.({ data: JSON.stringify({ Event: "EstablishConnection", EventType: "Acknowledgement", ReturnCode: 0 }) });
-    socket.onmessage?.({ data: JSON.stringify({ Event: "SPLoggedIn", EventType: "Acknowledgement", ReturnCode: 0 }) });
-
-    await adapter.setSoftphoneState({ callId: "call-out", direction: "outgoing", ringing: false, active: true, muted: false, held: false });
-
-    assert.equal(sent.at(-1).Event, "OutgoingCall");
-    assert.equal(sent.at(-1).CallID, "call-out");
-  });
-
-  it("maps EPOS held-call off-hook events to resume instead of answer", async () => {
-    const commands = [];
-    let socket;
-    class FakeWebSocket {
-      constructor() {
-        socket = this;
-        this.readyState = 0;
-        queueMicrotask(() => {
-          this.readyState = 1;
-          this.onopen?.();
-        });
-      }
-      send() {}
-      close() {}
-    }
-
-    const adapter = createEposAdapter({ WebSocketImpl: FakeWebSocket, url: "wss://127.0.0.1:41088", softphoneName: "Telnyx Contact Center" });
-    adapter.onCommand((command) => commands.push(command));
-    await adapter.init();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    socket.onmessage?.({ data: JSON.stringify({ Event: "SocketConnected", EventType: "Notification", ReturnCode: 0 }) });
-    socket.onmessage?.({ data: JSON.stringify({ Event: "EstablishConnection", EventType: "Acknowledgement", ReturnCode: 0 }) });
-    socket.onmessage?.({ data: JSON.stringify({ Event: "SPLoggedIn", EventType: "Acknowledgement", ReturnCode: 0 }) });
-
-    await adapter.setSoftphoneState({ callId: "call-held", direction: "incoming", ringing: false, active: true, muted: false, held: true });
-
-    socket.onmessage?.({ data: JSON.stringify({ Event: "OffHook", EventType: "Request", CallID: "call-held" }) });
-    socket.onmessage?.({ data: JSON.stringify({ Event: "InCallAcceptedOnOffhook", EventType: "Notification", CallID: "call-held" }) });
-
-    assert.deepEqual(commands.map((command) => command.type), [HEADSET_COMMANDS.HOLD, HEADSET_COMMANDS.HOLD]);
-    assert.deepEqual(commands.map((command) => command.held), [false, false]);
-  });
-
-  it("maps EPOS request-style headset controls for resume, hangup, and mute", async () => {
-    const commands = [];
-    let socket;
-    class FakeWebSocket {
-      constructor() {
-        socket = this;
-        this.readyState = 0;
-        queueMicrotask(() => {
-          this.readyState = 1;
-          this.onopen?.();
-        });
-      }
-      send() {}
-      close() {}
-    }
-
-    const adapter = createEposAdapter({ WebSocketImpl: FakeWebSocket, url: "wss://127.0.0.1:41088", softphoneName: "Telnyx Contact Center" });
-    adapter.onCommand((command) => commands.push(command));
-    await adapter.init();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    socket.onmessage?.({ data: JSON.stringify({ Event: "SocketConnected", EventType: "Notification", ReturnCode: 0 }) });
-    socket.onmessage?.({ data: JSON.stringify({ Event: "EstablishConnection", EventType: "Acknowledgement", ReturnCode: 0 }) });
-    socket.onmessage?.({ data: JSON.stringify({ Event: "SPLoggedIn", EventType: "Acknowledgement", ReturnCode: 0 }) });
-
-    await adapter.setSoftphoneState({ callId: "call-active", direction: "incoming", ringing: false, active: true, muted: false, held: true });
-
-    socket.onmessage?.({ data: JSON.stringify({ Event: "HeldCallResumed", EventType: "Request", CallID: "call-active" }) });
-    socket.onmessage?.({ data: JSON.stringify({ Event: "MuteSoftphone", EventType: "Request", CallID: "call-active" }) });
-    socket.onmessage?.({ data: JSON.stringify({ Event: "UnmuteSoftphone", EventType: "Request", CallID: "call-active" }) });
-    socket.onmessage?.({ data: JSON.stringify({ Event: "CallEnded", EventType: "Request", CallID: "call-active" }) });
-
-    assert.deepEqual(commands.map((command) => command.type), [
-      HEADSET_COMMANDS.HOLD,
-      HEADSET_COMMANDS.MUTE,
-      HEADSET_COMMANDS.MUTE,
-      HEADSET_COMMANDS.HANGUP,
-    ]);
-    assert.deepEqual(commands.map((command) => command.held ?? command.muted ?? null), [false, true, false, null]);
-  });
-
-  it("uses EPOS notifications plus active-device reconciliation for plug/unplug", async () => {
-    const sent = [];
-    const devices = [];
-    let socket;
-    class FakeWebSocket {
-      constructor() {
-        socket = this;
-        this.readyState = 0;
-        queueMicrotask(() => {
-          this.readyState = 1;
-          this.onopen?.();
-        });
-      }
-      send(payload) {
-        sent.push(JSON.parse(payload));
-      }
-      close() {}
-    }
-
-    const adapter = createEposAdapter({ WebSocketImpl: FakeWebSocket, reconnectDelayMs: 0, disconnectConfirmationMs: 20, transientDisconnectGraceMs: 0 });
-    adapter.onDeviceChange((device) => devices.push(device));
-    await adapter.init();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    socket.onmessage?.({ data: JSON.stringify({ Event: "SocketConnected", EventType: "Notification", ReturnCode: 0 }) });
-    socket.onmessage?.({ data: JSON.stringify({ Event: "EstablishConnection", EventType: "Acknowledgement", ReturnCode: 0 }) });
-    socket.onmessage?.({ data: JSON.stringify({ Event: "SPLoggedIn", EventType: "Acknowledgement", ReturnCode: 0 }) });
-    socket.onmessage?.({ data: JSON.stringify({ Event: "HeadsetConnected", EventType: "Notification", HeadsetType: "Sennheiser BTD 800 USB for Lync", HeadsetPath: "device-a" }) });
-
-    await new Promise((resolve) => setTimeout(resolve, 30));
-
-    assert.equal(devices.at(-1).model, "Sennheiser BTD 800 USB for Lync");
-    assert.equal(devices.at(-1).connectionState, "service-connected");
-    assert.equal(devices.at(-1).deviceRole, "dongle");
-    assert.deepEqual(sent.map((message) => message.Event), ["EstablishConnection", "SPLoggedIn", "SystemInformation", "ActiveDeviceChanged", "ActiveDeviceChanged"]);
-  });
-
-  it("treats EPOS product IDs as headset identity for catalog-only device notifications", async () => {
-    const devices = [];
-    let socket;
-    class FakeWebSocket {
-      constructor() {
-        socket = this;
-        this.readyState = 0;
-        queueMicrotask(() => {
-          this.readyState = 1;
-          this.onopen?.();
-        });
-      }
-      send() {}
-      close() {}
-    }
-
-    const adapter = createEposAdapter({ WebSocketImpl: FakeWebSocket, reconnectDelayMs: 0, disconnectConfirmationMs: 20, transientDisconnectGraceMs: 0 });
-    adapter.onDeviceChange((device) => devices.push(device));
-    await adapter.init();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    socket.onmessage?.({ data: JSON.stringify({ Event: "SocketConnected", EventType: "Notification", ReturnCode: 0 }) });
-    socket.onmessage?.({ data: JSON.stringify({ Event: "HeadsetConnected", EventType: "Notification", ProductID: "0xA055" }) });
-
-    assert.equal(devices.at(-1).id, "0xA055");
-    assert.equal(devices.at(-1).productId, "0xA055");
-    assert.equal(devices.at(-1).connectionState, "connected");
-  });
-
-  it("compares EPOS product IDs before confirming catalog-only device disconnects", async () => {
-    const devices = [];
-    let socket;
-    class FakeWebSocket {
-      constructor() {
-        socket = this;
-        this.readyState = 0;
-        queueMicrotask(() => {
-          this.readyState = 1;
-          this.onopen?.();
-        });
-      }
-      send() {}
-      close() {}
-    }
-
-    const adapter = createEposAdapter({ WebSocketImpl: FakeWebSocket, reconnectDelayMs: 0, disconnectConfirmationMs: 20, transientDisconnectGraceMs: 0 });
-    adapter.onDeviceChange((device) => devices.push(device));
-    await adapter.init();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    socket.onmessage?.({ data: JSON.stringify({ Event: "SocketConnected", EventType: "Notification", ReturnCode: 0 }) });
-    socket.onmessage?.({ data: JSON.stringify({ Event: "HeadsetConnected", EventType: "Notification", ProductID: "0xA055" }) });
-    socket.onmessage?.({ data: JSON.stringify({ Event: "HeadsetDisconnected", EventType: "Notification", ProductID: "0xBEEF" }) });
-
-    await new Promise((resolve) => setTimeout(resolve, 25));
-    assert.equal(devices.at(-1).productId, "0xA055");
-    assert.equal(devices.at(-1).connectionState, "connected");
-
-    socket.onmessage?.({ data: JSON.stringify({ Event: "HeadsetDisconnected", EventType: "Notification", ProductID: "0xA055" }) });
-
-    await new Promise((resolve) => setTimeout(resolve, 25));
-    assert.equal(devices.at(-1).connectionState, "service-connected");
-  });
-
-  it("ignores ActiveDeviceChanged acknowledgements and empty notifications as device updates", async () => {
-    const devices = [];
-    let socket;
-    class FakeWebSocket {
-      constructor() {
-        socket = this;
-        this.readyState = 0;
-        queueMicrotask(() => {
-          this.readyState = 1;
-          this.onopen?.();
-        });
-      }
-      send() {}
-      close() {}
-    }
-
-    const adapter = createEposAdapter({ WebSocketImpl: FakeWebSocket, reconnectDelayMs: 0, disconnectConfirmationMs: 20, transientDisconnectGraceMs: 0 });
-    adapter.onDeviceChange((device) => devices.push(device));
-    await adapter.init();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    socket.onmessage?.({ data: JSON.stringify({ Event: "SocketConnected", EventType: "Notification", ReturnCode: 0 }) });
-    socket.onmessage?.({ data: JSON.stringify({ Event: "HeadsetConnected", EventType: "Notification", HeadsetType: "Sennheiser BTD 800 USB for Lync", HeadsetPath: "device-a" }) });
-    socket.onmessage?.({ data: JSON.stringify({ Event: "ActiveDeviceChanged", EventType: "Acknowledgement", ReturnCode: 0 }) });
-    socket.onmessage?.({ data: JSON.stringify({ Event: "ActiveDeviceChanged", EventType: "Notification" }) });
-
-    assert.equal(devices.at(-1).model, "Sennheiser BTD 800 USB for Lync");
-    assert.equal(devices.some((device) => device?.id === "connected"), false);
-  });
-
-  it("only clears the current EPOS device when the matching device disconnect is confirmed", async () => {
-    const devices = [];
-    const diagnostics = [];
-    let socket;
-    class FakeWebSocket {
-      constructor() {
-        socket = this;
-        this.readyState = 0;
-        queueMicrotask(() => {
-          this.readyState = 1;
-          this.onopen?.();
-        });
-      }
-      send() {}
-      close() {}
-    }
-
-    const adapter = createEposAdapter({ WebSocketImpl: FakeWebSocket, reconnectDelayMs: 0, disconnectConfirmationMs: 20, transientDisconnectGraceMs: 0 });
-    adapter.onDeviceChange((device) => devices.push(device));
-    adapter.onDiagnostic((diagnostic) => diagnostics.push(diagnostic));
-    await adapter.init();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    socket.onmessage?.({ data: JSON.stringify({ Event: "SocketConnected", EventType: "Notification", ReturnCode: 0 }) });
-    socket.onmessage?.({ data: JSON.stringify({ Event: "HeadsetConnected", EventType: "Notification", HeadsetType: "Sennheiser BTD 800 USB for Lync", HeadsetPath: "device-a" }) });
-    socket.onmessage?.({ data: JSON.stringify({ Event: "HeadsetDisconnected", EventType: "Notification", HeadsetType: "Other", HeadsetPath: "device-b" }) });
-
-    await new Promise((resolve) => setTimeout(resolve, 25));
-    assert.equal(devices.at(-1).model, "Sennheiser BTD 800 USB for Lync");
-
-    socket.onmessage?.({ data: JSON.stringify({ Event: "HeadsetDisconnected", EventType: "Notification", HeadsetType: "Sennheiser BTD 800 USB for Lync", HeadsetPath: "device-a" }) });
-    assert.equal(diagnostics.some((item) => /confirming active device/.test(item.message)), true);
-
-    await new Promise((resolve) => setTimeout(resolve, 25));
-    assert.equal(devices.at(-1).connectionState, "service-connected");
-  });
-
-  it("does not cancel a pending EPOS disconnect when another headset disconnects", async () => {
-    const devices = [];
-    let socket;
-    class FakeWebSocket {
-      constructor() {
-        socket = this;
-        this.readyState = 0;
-        queueMicrotask(() => {
-          this.readyState = 1;
-          this.onopen?.();
-        });
-      }
-      send() {}
-      close() {}
-    }
-
-    const adapter = createEposAdapter({ WebSocketImpl: FakeWebSocket, reconnectDelayMs: 0, disconnectConfirmationMs: 20, transientDisconnectGraceMs: 0 });
-    adapter.onDeviceChange((device) => devices.push(device));
-    await adapter.init();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    socket.onmessage?.({ data: JSON.stringify({ Event: "SocketConnected", EventType: "Notification", ReturnCode: 0 }) });
-    socket.onmessage?.({ data: JSON.stringify({ Event: "HeadsetConnected", EventType: "Notification", HeadsetType: "Sennheiser BTD 800 USB for Lync", HeadsetPath: "device-a" }) });
-    socket.onmessage?.({ data: JSON.stringify({ Event: "HeadsetDisconnected", EventType: "Notification", HeadsetType: "Sennheiser BTD 800 USB for Lync", HeadsetPath: "device-a" }) });
-    socket.onmessage?.({ data: JSON.stringify({ Event: "HeadsetDisconnected", EventType: "Notification", HeadsetType: "Other", HeadsetPath: "device-b" }) });
-
-    await new Promise((resolve) => setTimeout(resolve, 25));
-    assert.equal(devices.at(-1).connectionState, "service-connected");
-  });
-
-  it("keeps a just-detected EPOS headset when EPOS emits an immediate transient disconnect", async () => {
-    const devices = [];
-    const diagnostics = [];
-    let socket;
-    let currentTime = 1000;
-    class FakeWebSocket {
-      constructor() {
-        socket = this;
-        this.readyState = 0;
-        queueMicrotask(() => {
-          this.readyState = 1;
-          this.onopen?.();
-        });
-      }
-      send() {}
-      close() {}
-    }
-
-    const adapter = createEposAdapter({
-      WebSocketImpl: FakeWebSocket,
-      reconnectDelayMs: 0,
-      disconnectConfirmationMs: 20,
-      transientDisconnectGraceMs: 5000,
-      now: () => currentTime,
-    });
-    adapter.onDeviceChange((device) => devices.push(device));
-    adapter.onDiagnostic((diagnostic) => diagnostics.push(diagnostic));
-    await adapter.init();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    socket.onmessage?.({ data: JSON.stringify({ Event: "SocketConnected", EventType: "Notification", ReturnCode: 0 }) });
-    socket.onmessage?.({ data: JSON.stringify({ Event: "HeadsetConnected", EventType: "Notification", HeadsetName: "Sennheiser SC230 USB CTRL II", HeadsetPath: "Sennheiser SC230 USB CTRL II", HeadsetType: "Sennheiser SC230 USB CTRL II" }) });
-    currentTime += 10;
-    socket.onmessage?.({ data: JSON.stringify({ Event: "HeadsetDisconnected", EventType: "Notification", HeadsetName: "Sennheiser SC230 USB CTRL II", HeadsetPath: "Sennheiser SC230 USB CTRL II", HeadsetType: "Sennheiser SC230 USB CTRL II" }) });
-
-    await new Promise((resolve) => setTimeout(resolve, 25));
-    assert.equal(devices.at(-1).model, "Sennheiser SC230 USB CTRL II");
-    assert.equal(devices.at(-1).connectionState, "connected");
-    assert.equal(diagnostics.some((item) => /deferring transient disconnect confirmation/.test(item.message)), true);
-  });
-
-  it("uses browser media-device changes as a fallback when EPOS does not push plug events", async () => {
-    const devices = [];
-    const sent = [];
-    let socket;
-    let deviceChangeHandler;
-    const mediaDevices = {
-      addEventListener(event, handler) {
-        if (event === "devicechange") deviceChangeHandler = handler;
-      },
-      removeEventListener() {},
-      async enumerateDevices() {
-        return [
-          { kind: "audioinput", label: "Sennheiser SC230 USB CTRL II", deviceId: "mic-1" },
-          { kind: "audiooutput", label: "MacBook Speakers", deviceId: "speaker-1" },
-        ];
-      },
-    };
-    class FakeWebSocket {
-      constructor() {
-        socket = this;
-        this.readyState = 0;
-        queueMicrotask(() => {
-          this.readyState = 1;
-          this.onopen?.();
-        });
-      }
-      send(payload) { sent.push(JSON.parse(payload)); }
-      close() {}
-    }
-
-    const adapter = createEposAdapter({ WebSocketImpl: FakeWebSocket, mediaDevices, reconnectDelayMs: 0 });
-    adapter.onDeviceChange((device) => devices.push(device));
-    await adapter.init();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    socket.onmessage?.({ data: JSON.stringify({ Event: "SocketConnected", EventType: "Notification", ReturnCode: 0 }) });
-
-    deviceChangeHandler?.();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    assert.equal(devices.at(-1).model, "Sennheiser SC230 USB CTRL II");
-    assert.equal(devices.at(-1).transport, "browser-media-device");
-    assert.equal(devices.at(-1).connectionState, "connected");
-    assert.equal(sent.map((message) => message.Event).includes("ActiveDeviceChanged"), true);
-  });
-
-  it("maps EPOS headset-originated mute events and ignores acknowledgements for app-sent mute commands", async () => {
-    const emitted = [];
-    let socket;
-    class FakeWebSocket {
-      constructor() {
-        socket = this;
-        this.readyState = 0;
-        queueMicrotask(() => {
-          this.readyState = 1;
-          this.onopen?.();
-        });
-      }
-      send() {}
-      close() {}
-    }
-
-    const adapter = createEposAdapter({ WebSocketImpl: FakeWebSocket, reconnectDelayMs: 0 });
-    adapter.onCommand((command) => emitted.push(command));
-    await adapter.init();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    socket.onmessage?.({ data: JSON.stringify({ Event: "MuteHeadset", EventType: "Acknowledgement", ReturnCode: 0 }) });
-    socket.onmessage?.({ data: JSON.stringify({ Event: "MuteSoftphone", EventType: "Notification" }) });
-    socket.onmessage?.({ data: JSON.stringify({ Event: "UnmuteSoftphone", EventType: "Notification" }) });
-
-    assert.deepEqual(emitted, [
-      { type: HEADSET_COMMANDS.MUTE, muted: true, source: "headset" },
-      { type: HEADSET_COMMANDS.MUTE, muted: false, source: "headset" },
-    ]);
-  });
+test('EPOS waits for successful registration and a real device, ignoring ACK device payloads', async t => {
+  const f = eposFixture(); t.after(() => f.adapter.dispose()); await f.adapter.init(); f.discover();
+  await assert.rejects(f.adapter.setSelectedDevice(f.device.id), /not ready/);
+  f.receive({ Event: 'EstablishConnection', EventType: 'Acknowledgement', ReturnCode: 7 }); assert.equal(f.sent.some(m => m.Event === 'SPLoggedIn'), false);
+  f.login(); f.discover(); await f.adapter.setSelectedDevice(f.device.id);
+  f.receive({ Event: 'ActiveDeviceChanged', EventType: 'Acknowledgement', ProductName: 'wrong' }); assert.equal(f.device.id, 'epos-a');
+});
+test('EPOS sends acknowledged incoming, answer, mute, hold, resume, unmute and end', async t => {
+  const f = eposFixture(); t.after(() => f.adapter.dispose()); await f.ready(); f.sent.length = 0;
+  await f.adapter.setSoftphoneState({ callId: 'c1', ringing: true }); await f.adapter.setSoftphoneState({ callId: 'c1', active: true });
+  await f.adapter.setSoftphoneState({ callId: 'c1', active: true, muted: true, held: true }); await f.adapter.setSoftphoneState({ callId: 'c1', active: true }); await f.adapter.setSoftphoneState({});
+  assert.deepEqual(f.sent.map(m => m.Event), ['IncomingCall', 'InCallAccepted', 'MuteHeadset', 'CallHold', 'UnmuteHeadset', 'HeldCallResumed', 'CallEnded']);
+});
+test('EPOS BTD 800 live discovery enables the registered adapter without inventing a paired headset', async t => {
+  const f = eposFixture(), commands = []; t.after(() => f.adapter.dispose());
+  f.adapter.onCommand(command => commands.push(command)); await f.adapter.init();
+  const dongle = { Event: 'HeadsetConnected', EventType: 'Notification',
+    HeadsetName: 'Sennheiser BTD 800 USB for Lync', HeadsetPath: 'Sennheiser BTD 800 USB for Lync', HeadsetType: 'Sennheiser BTD 800 USB for Lync' };
+  f.receive(dongle); assert.equal(f.device.controlReady, false);
+  await assert.rejects(f.adapter.setSelectedDevice(f.device.id), /not ready/);
+  f.login(); assert.equal(f.device.controlReady, true); assert.equal(f.device.deviceRole, 'dongle');
+  assert.equal(f.device.model, dongle.HeadsetName);
+  await f.adapter.setSelectedDevice(f.device.id);
+  await f.adapter.setSoftphoneState({ callId: 'dongle-call', ringing: true });
+  f.receive({ Event: 'InCallAccepted', EventType: 'Request' });
+  assert.equal(commands.at(-1).type, 'answer'); assert.equal(commands.at(-1).deviceId, dongle.HeadsetPath);
+  await f.adapter.setSoftphoneState({ callId: 'dongle-call', active: true, muted: true, held: true });
+  assert(f.sent.some(m => m.Event === 'MuteHeadset')); assert(f.sent.some(m => m.Event === 'CallHold'));
+  f.receive({ Event: 'HeadsetDisconnected', EventType: 'Notification', HeadsetPath: dongle.HeadsetPath });
+  await new Promise(resolve => setTimeout(resolve, 10)); assert.equal(f.device.controlReady, false);
+  f.receive(dongle); assert.equal(f.device.controlReady, true);
+});
+test('EPOS BTD 800 browser enumeration alone never grants control readiness', async t => {
+  const f = eposFixture({ mediaDevices: { enumerateDevices: async () => [{ kind: 'audioinput', label: 'Sennheiser BTD 800 USB for Lync (1395:002d)', deviceId: 'usb' }] } });
+  t.after(() => f.adapter.dispose()); await f.adapter.init(); f.login(); await tick();
+  assert.equal(f.device.connectionState, 'audio-only'); assert.equal(f.device.controlReady, false);
+  await assert.rejects(f.adapter.setSelectedDevice(f.device.id), /not ready/);
+});
+test('EPOS discovery never sends an empty ActiveDeviceChanged setter that deselects macOS hardware', async t => {
+  let deviceChange;
+  const f = eposFixture({ mediaDevices: { enumerateDevices: async () => [], addEventListener: (_event, fn) => { deviceChange = fn; }, removeEventListener() {} } });
+  t.after(() => f.adapter.dispose()); await f.ready(); deviceChange();
+  f.receive({ Event: 'HeadsetDisconnected', EventType: 'Notification', HeadsetPath: 'epos-a' }); await tick();
+  assert.equal(f.sent.some(m => m.Event === 'ActiveDeviceChanged'), false);
+});
+test('outgoing dialing activates Jabra and EPOS call indicators before the remote party answers', async t => {
+  const jabra = jabraFixture(), epos = eposFixture(); t.after(() => Promise.all([jabra.adapter.dispose(), epos.adapter.dispose()]));
+  await jabra.adapter.init(); await jabra.adapter.setSelectedDevice('a'); await epos.ready();
+  const dialing = { callId: 'dialing', direction: 'outgoing', active: false, ringing: false };
+  await jabra.adapter.setSoftphoneState(dialing); await epos.adapter.setSoftphoneState(dialing);
+  assert(jabra.calls.some(c => c[0] === 'start')); assert(epos.sent.some(m => m.Event === 'OutgoingCall'));
+  await jabra.adapter.setSoftphoneState({}); await epos.adapter.setSoftphoneState({});
+  assert(jabra.calls.some(c => c[0] === 'end')); assert(epos.sent.some(m => m.Event === 'CallEnded'));
+});
+test('EPOS negative ACK leaves failed transition retryable without repeating call start', async t => {
+  const f = eposFixture(); t.after(() => f.adapter.dispose()); await f.ready(); f.sent.length = 0;
+  f.responses.set('MuteHeadset', 5); await assert.rejects(f.adapter.setSoftphoneState({ callId: 'c1', active: true, muted: true }), /rejected/);
+  f.responses.set('MuteHeadset', 0); await f.adapter.setSoftphoneState({ callId: 'c1', active: true, muted: true });
+  assert.equal(f.sent.filter(m => m.Event === 'InCallAccepted').length, 1); assert.equal(f.sent.filter(m => m.Event === 'MuteHeadset').length, 2);
+});
+test('EPOS missing ACK closes the session; late ACK cannot confirm a new command', async t => {
+  const f = eposFixture(); t.after(() => f.adapter.dispose()); await f.ready(); f.responses.set('OutgoingCall', null);
+  await assert.rejects(f.adapter.setSoftphoneState({ callId: 'c1', direction: 'outgoing', active: true }), /timed out/);
+  assert.equal(f.socket.readyState, 3); assert.equal(f.device.connectionState, 'service-missing');
+});
+test('EPOS button events flow back; ACK echoes and wrong call IDs do not', async t => {
+  const f = eposFixture(), commands = []; t.after(() => f.adapter.dispose()); f.adapter.onCommand(c => commands.push(c)); await f.ready();
+  await f.adapter.setSoftphoneState({ callId: 'c1', active: true, held: true });
+  for (const Event of ['OffHook', 'MuteSoftphone', 'UnmuteSoftphone', 'CallHold', 'HeldCallResumed', 'OnHook']) f.receive({ Event, EventType: 'Request', CallID: 'c1' });
+  f.receive({ Event: 'MuteHeadset', EventType: 'Acknowledgement', ReturnCode: 0 }); f.receive({ Event: 'OnHook', EventType: 'Request', CallID: 'old' });
+  assert.deepEqual(commands.map(c => [c.type, c.held ?? c.muted]), [['hold', false], ['mute', true], ['mute', false], ['hold', true], ['hold', false], ['hangup', undefined]]);
+});
+test('EPOS browser audio is reported as audio-only when local service is missing', async t => {
+  const f = eposFixture({ mediaDevices: { enumerateDevices: async () => [{ kind: 'audioinput', label: 'Sennheiser SC320 USB CTRL II', deviceId: 'mic' }] } });
+  t.after(() => f.adapter.dispose()); await f.adapter.init(); f.login(); await tick();
+  assert.equal(f.device.connectionState, 'audio-only'); assert.equal(f.device.controlReady, false); assert.equal(f.device.capabilities.mute, false);
+});
+test('EPOS ignores another device disconnect and confirms the matching disconnect', async t => {
+  const f = eposFixture(); t.after(() => f.adapter.dispose()); await f.ready();
+  f.receive({ Event: 'HeadsetDisconnected', EventType: 'Notification', HeadsetPath: 'other' }); await new Promise(r => setTimeout(r, 10)); assert.equal(f.device.id, 'epos-a');
+  f.receive({ Event: 'HeadsetDisconnected', EventType: 'Notification', HeadsetPath: 'epos-a' }); await new Promise(r => setTimeout(r, 10)); assert.equal(f.device.connectionState, 'service-connected');
+});
+test('EPOS reports 0% battery correctly and supports product-ID identity', async t => {
+  const f = eposFixture(); t.after(() => f.adapter.dispose()); await f.adapter.init(); f.login(); f.discover({ HeadsetPath: undefined, ProductId: 42, BatteryLevel: 0 });
+  assert.equal(f.device.id, '42'); assert.equal(f.device.battery.levelPercent, 0);
 });

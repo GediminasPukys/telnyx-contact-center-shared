@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { getPostgresPool } from "@/lib/postgres.mjs";
-import { normalizeMac, SUPPORTED_VENDORS } from "@/lib/hardphones/config-generators.mjs";
-import { assignPhoneNumberToConnection, createPhoneSipConnection, deletePhoneSipConnection, listUnassignedPhoneNumbers, updatePhoneSipConnectionCallerId } from "@/lib/hardphones/credentials.mjs";
+import { normalizeMac, SUPPORTED_VENDORS, validatePhoneLineLabel } from "@/lib/hardphones/config-generators.mjs";
+import { createPhoneSipConnection, deletePhoneSipConnection, listTelnyxPhoneNumbers } from "@/lib/hardphones/credentials.mjs";
+import { ownedVoiceNumber } from "@/lib/telephony/dialing.mjs";
 import { syncHardphonePhoneNumbersFromTelnyx } from "@/lib/hardphones/number-sync.mjs";
 import { syncHardphoneRegistrationStatusesFromTelnyx } from "@/lib/hardphones/registration-sync.mjs";
 import { adminRuntimeLogger, runtimePayload } from "@/lib/runtime-logging.mjs";
@@ -9,7 +10,7 @@ import { withPermission } from "@/lib/authz/guard";
 
 
 const PHONE_COLUMNS = `id, phone_name, mac, vendor, model, label, agent_id, telnyx_credential_id, telnyx_connection_id, telnyx_connection_name,
-  assigned_phone_number_id, assigned_phone_number, sip_username, admin_password, settings, provisioning_state, ip_address, last_ip,
+  assigned_phone_number_id, assigned_phone_number, sip_username, settings, provisioning_state, ip_address, last_ip,
   local_bridge_id, sip_registration_status, sip_registration_status_at, last_seen_at, last_user_agent, created_at, updated_at`;
 
 function hardphoneConfigStatus(user = {}) {
@@ -55,7 +56,7 @@ async function GET_handler(request, _context, authz) {
     const searchParams = new URL(request.url).searchParams;
     const includeAvailablePhoneNumbers = searchParams.get("includeAvailablePhoneNumbers") === "1";
     const syncNumbers = includeAvailablePhoneNumbers || searchParams.get("syncNumbers") === "1";
-    const [{ rows }, { rows: eventRows }, { rows: registrationRows }, availablePhoneNumbers] = await Promise.all([
+    const [{ rows }, { rows: eventRows }, { rows: registrationRows }, availablePhoneNumbers, { rows: extensionRows }] = await Promise.all([
       pool.query(`SELECT ${PHONE_COLUMNS} FROM hp_phones ORDER BY created_at DESC LIMIT 500`),
       pool.query(
         `SELECT phone_id, MAX(created_at) AS last_event_at, COUNT(*)::int AS events
@@ -67,10 +68,13 @@ async function GET_handler(request, _context, authz) {
          WHERE event_type = 'registration_status_event'
          ORDER BY phone_id, created_at DESC`,
       ),
-      includeAvailablePhoneNumbers ? listUnassignedPhoneNumbers().catch((err) => {
+      includeAvailablePhoneNumbers ? listTelnyxPhoneNumbers().then(items => items.map(n => ({ id:n.id, phone_number:n.phone_number }))).catch((err) => {
         adminRuntimeLogger.warn("hardphone_number_inventory_failed", runtimePayload({ error: err, operation: "hp_number_inventory" }));
         return [];
       }) : Promise.resolve([]),
+      pool.query(`SELECT s.phone_id, a.number AS extension
+        FROM cc_phone_stations s JOIN cc_extension_assignments a ON a.station_id=s.id
+        WHERE a.target_type='phone' AND s.phone_id IS NOT NULL`),
     ]);
     let syncedRows = syncNumbers ? await syncHardphonePhoneNumbersFromTelnyx(pool, rows).catch((err) => {
       adminRuntimeLogger.warn("hardphone_number_sync_failed", runtimePayload({ error: err, operation: "hp_number_sync" }));
@@ -82,9 +86,11 @@ async function GET_handler(request, _context, authz) {
     });
     const eventsByPhone = Object.fromEntries(eventRows.map((r) => [r.phone_id, r]));
     const registrationByPhone = Object.fromEntries(registrationRows.map((r) => [r.phone_id, r]));
+    const extensionByPhone = Object.fromEntries(extensionRows.map(r => [r.phone_id, r.extension]));
     return NextResponse.json({
       phones: syncedRows.map((p) => ({
         ...p,
+        extension: extensionByPhone[p.id] || null,
         recent_events: eventsByPhone[p.id]?.events || 0,
         ...resolveSipRegistrationStatus(p, registrationByPhone[p.id]),
       })),
@@ -121,31 +127,16 @@ async function POST_handler(request, _context, authz) {
     if (existing.length) return NextResponse.json({ error: "A phone with this MAC already exists" }, { status: 409 });
 
     const phoneName = String(body?.phone_name || "").trim() || null;
-    const label = String(body?.label || "").trim() || null;
+    const label = validatePhoneLineLabel(body?.label, vendor);
     const model = String(body?.model || "").trim() || null;
     const assignedPhoneNumberId = String(body?.assigned_phone_number_id || "").trim() || null;
-    const assignedPhoneNumber = String(body?.assigned_phone_number || "").trim() || null;
-    if (assignedPhoneNumberId || assignedPhoneNumber) {
-      const { rows: assignedRows } = await pool.query(
-        `SELECT id FROM hp_phones
-         WHERE ($1::text IS NOT NULL AND assigned_phone_number_id = $1)
-            OR ($2::text IS NOT NULL AND assigned_phone_number = $2)
-         LIMIT 1`,
-        [assignedPhoneNumberId, assignedPhoneNumber],
-      );
-      if (assignedRows.length) return NextResponse.json({ error: "Selected phone number is already assigned to another hard phone" }, { status: 409 });
-    }
+    if (!assignedPhoneNumberId && body.assigned_phone_number) return NextResponse.json({ error: "Select a DID from the Telnyx inventory" }, { status: 400 });
+    const selectedNumber = assignedPhoneNumberId ? await ownedVoiceNumber(assignedPhoneNumberId) : null;
+    const assignedPhoneNumber = selectedNumber?.number || null;
     let connection = { id: null, connection_id: null, connection_name: null, sip_username: null, sip_password: null };
-    let assignedNumber = null;
+    const assignedNumber = selectedNumber ? { id: selectedNumber.id, phone_number: selectedNumber.number } : null;
     try {
-      connection = await createPhoneSipConnection({ label: phoneName || label, mac, vendor, model, assignedPhoneNumber });
-      if (assignedPhoneNumberId) {
-        assignedNumber = await assignPhoneNumberToConnection(assignedPhoneNumberId, connection.connection_id || connection.id);
-      }
-      const callerIdNumber = assignedNumber?.phone_number || assignedPhoneNumber || null;
-      if (callerIdNumber) {
-        await updatePhoneSipConnectionCallerId({ connectionId: connection.connection_id || connection.id, phoneNumber: callerIdNumber });
-      }
+      connection = await createPhoneSipConnection({ mac, vendor, model });
     } catch (err) {
       adminRuntimeLogger.error("hardphone_credential_failed", runtimePayload({ error: err, operation: "hp_sip_connection_create" }));
       if (connection?.id) await deletePhoneSipConnection(connection.id);
@@ -181,7 +172,7 @@ async function POST_handler(request, _context, authz) {
           connection.sip_username,
           connection.sip_password,
           adminPassword,
-          JSON.stringify(body?.settings && typeof body.settings === "object" ? body.settings : {}),
+          JSON.stringify({ ...(body?.settings && typeof body.settings === "object" ? body.settings : {}), outbound_caller_id_configured: true }),
           ipAddress,
           String(body?.local_bridge_id || body?.settings?.local_bridge_id || "").trim() || null,
           user.id || user.email || null,
@@ -218,7 +209,7 @@ async function POST_handler(request, _context, authz) {
     }
   } catch (err) {
     adminRuntimeLogger.error("hardphone_create_failed", runtimePayload({ error: err, operation: "hp_create" }));
-    return NextResponse.json({ error: "Failed to create phone" }, { status: 500 });
+    return NextResponse.json({ error: err.status ? err.message : "Failed to create phone" }, { status: err.status || 500 });
   }
 }
 
