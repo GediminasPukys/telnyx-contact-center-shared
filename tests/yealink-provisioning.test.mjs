@@ -9,7 +9,7 @@ import { yealinkDriver, normalizeYealinkActionResult } from "../lib/hardphones/d
 const phone = { id: "test-phone", mac: "001565000001", vendor: "yealink", model: "T22P",
   sip_username: "credential", sip_password: "sip-secret", admin_password: "private-admin",
   extension: "1004", settings: {} };
-const keys = generateKeyPairSync("rsa", { modulusLength: 1024 });
+const keys = generateKeyPairSync("rsa", { modulusLength: 2048 });
 const jwk = keys.publicKey.export({ format: "jwk" });
 const n = Buffer.from(jwk.n, "base64url").toString("hex"), e = Buffer.from(jwk.e, "base64url").toString("hex");
 const html = states => `<td id="tdFirmware">7.73.0.50</td><td id="tdMACAddress">001565000001</td><tbody id="StatusAccountStatus">${states.map(s => `<script>T("${s}")</script>`).join("")}</tbody>`;

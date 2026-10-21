@@ -35,8 +35,8 @@ test('allowlisted payload starts bundled workers without checkout dependencies o
     const exec = promisify(execFile);
     for (const name of ['bridge-worker', 'onboarding-worker']) {
       const url = pathToFileURL(path.join(stage, `${name}.mjs`)).href;
-      const script = `process.parentPort={on:(type,handler)=>{if(type!=='message'||typeof handler!=='function')throw Error('Bad IPC');},postMessage:()=>{}}; await import(${JSON.stringify(url)}); console.log('worker-ready');`;
-      const {stdout, stderr} = await exec(process.execPath, ['--input-type=module', '-e', script], {cwd: stage, timeout: 10000});
+      const script = `process.parentPort={on:(type,handler)=>{if(type!=='message'||typeof handler!=='function')throw Error('Bad IPC');},postMessage:()=>{}}; await import(process.argv[1]); console.log('worker-ready');`;
+      const {stdout, stderr} = await exec(process.execPath, ['--input-type=module', '-e', script, url], {cwd: stage, timeout: 10000});
       assert.match(stdout, /worker-ready/); assert.equal(stderr, '');
     }
     const runtime = (await Promise.all(entries.filter(file => /\.(mjs|cjs|js|json|html)$/.test(file)).map(file => fs.readFile(path.join(stage, file), 'utf8')))).join('\n');

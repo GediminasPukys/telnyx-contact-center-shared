@@ -13,7 +13,15 @@ const bundle=await build({entryPoints:['tests/headsets-browser/entry.jsx'],bundl
 const buildDirectory=process.env.NEXT_DIST_DIR || '.next';
 const cssFiles=(await fs.readdir(buildDirectory+'/static/chunks')).filter(f=>f.endsWith('.css'));
 const css=(await Promise.all(cssFiles.map(f=>fs.readFile(buildDirectory+'/static/chunks/'+f,'utf8')))).join('\n');
-const server=createServer(async(req,res)=>{if(req.url==='/bundle.js'){res.setHeader('Content-Type','application/javascript');res.end(bundle.outputFiles[0].contents);}else if(req.url==='/style.css'){res.setHeader('Content-Type','text/css');res.end(css);}else if(/^\/images\/headsets\/(light|dark)\/[a-z0-9-]+\.webp$/.test(req.url)){try{res.setHeader('Content-Type','image/webp');res.end(await fs.readFile('public'+req.url));}catch{res.writeHead(404);res.end();}}else res.end('<html><head><link rel="stylesheet" href="/style.css"></head><body style="background:var(--background)"><div id="root"></div><script src="/bundle.js"></script></body></html>');});
+// Serve only files enumerated from the fixture asset directories at startup.
+const artwork = new Map();
+for (const theme of ['light', 'dark']) {
+ const directory = path.join('public/images/headsets', theme);
+ for (const name of await fs.readdir(directory)) {
+  if (/^[a-z0-9-]+\.webp$/.test(name)) artwork.set(`/images/headsets/${theme}/${name}`, await fs.readFile(path.join(directory, name)));
+ }
+}
+const server=createServer(async(req,res)=>{if(req.url==='/bundle.js'){res.setHeader('Content-Type','application/javascript');res.end(bundle.outputFiles[0].contents);}else if(req.url==='/style.css'){res.setHeader('Content-Type','text/css');res.end(css);}else if(artwork.has(req.url)){res.setHeader('Content-Type','image/webp');res.end(artwork.get(req.url));}else res.end('<html><head><link rel="stylesheet" href="/style.css"></head><body style="background:var(--background)"><div id="root"></div><script src="/bundle.js"></script></body></html>');});
 await new Promise(r=>server.listen(0,'127.0.0.1',r));
 if(process.argv.includes('--manual')){console.log(`Audio UI fixture: http://127.0.0.1:${server.address().port}`);await new Promise(()=>{});}
 const browser=await puppeteer.launch({headless:true,executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});const page=await browser.newPage();page.setDefaultTimeout(15000);const errors=[],results=[];page.on('pageerror',e=>errors.push(e.message));

@@ -347,7 +347,7 @@ describe("hard phones CTI driver layer (Phase 2)", () => {
   it("polycom driver pins enrolled certificates and only allows explicit legacy HTTP", async () => {
     const code = await src("lib/hardphones/drivers/polycom.mjs");
     assert.match(code, /import https from "node:https"/);
-    assert.match(code, /rejectUnauthorized: false/);
+    assert.match(code, /createDeviceTlsAgent/);
     assert.match(code, /certificate_changed/);
     assert.match(code, /http:\/\/\$\{host\}\$\{path\}/);
     assert.match(code, /allow_http_cti !== true/);

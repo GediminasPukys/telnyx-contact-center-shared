@@ -47,9 +47,10 @@ export function installHeadsetTransportProbe() {
     close() { this.readyState = 3; this.onclose?.(); }
   }
   window.WebSocket = new Proxy(NativeSocket, { construct(target, args) {
-    if (String(args[0]).startsWith('wss://127.0.0.1:41088')) return new EposSocket();
+    const endpoint = new URL(String(args[0]));
+    if (endpoint.origin === 'wss://127.0.0.1:41088') return new EposSocket();
     const real = Reflect.construct(target, args);
-    if (String(args[0]).includes('rtc.telnyx.com')) real.addEventListener('message', e => {
+    if (endpoint.protocol === 'wss:' && endpoint.hostname === 'rtc.telnyx.com') real.addEventListener('message', e => {
       try { const m = JSON.parse(e.data), p = m.params || {};
         signaling.push({ method: m.method, error: m.error?.message, code: m.error?.code, cause: p.cause, causeCode: p.causeCode, callId: p.callID });
       } catch { /* Only structured, credential-free signaling evidence. */ }

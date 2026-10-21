@@ -1,7 +1,7 @@
 import { polycomDriver } from '../../lib/hardphones/drivers/polycom.mjs';
 import { audioCodesSession, parseAudioCodesStatus } from '../../lib/hardphones/audiocodes-provisioning.mjs';
 import { yealinkLegacySession, parseYealinkStatus } from '../../lib/hardphones/yealink-provisioning.mjs';
-import { decodeDeviceHtml } from '../../lib/hardphones/device-web.mjs';
+import { deviceTableText } from '../../lib/hardphones/device-web.mjs';
 import { normalizeMac } from '../../lib/hardphones/config-generators.mjs';
 
 // Public manufacturer defaults, NOT customer credentials. One attempt per
@@ -11,7 +11,7 @@ export const FACTORY_CREDENTIALS = Object.freeze({
   audiocodes:{username:'admin',password:'1234'},
   yealink:{username:'admin',password:'admin'},
 });
-const table = (html,label) => decodeDeviceHtml(html.match(new RegExp(`${label}\\s*</td>\\s*<td[^>]*>([\\s\\S]*?)</td>`,'i'))?.[1] || '').replace(/<[^>]*>/g,'').trim();
+const table = deviceTableText;
 
 export async function authenticatePhone(candidate, password, {poly=polycomDriver, audioSession=audioCodesSession, yealinkSession=yealinkLegacySession}={}) {
   const target={...candidate,admin_user:FACTORY_CREDENTIALS[candidate.vendor]?.username,admin_password:password,
