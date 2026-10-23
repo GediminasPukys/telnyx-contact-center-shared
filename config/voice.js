@@ -546,6 +546,18 @@ export function getDefaultTranscriptionLanguage(modelName, fallback = "auto") {
   return languages[0] || fallback;
 }
 
+// Soniox TTS voices are multilingual: the voice sets the accent and the
+// `language` parameter of speak/gather_using_speak sets the pronunciation.
+// Soniox synthesizes the same ISO 639-1 languages its STT recognizes.
+// https://developers.telnyx.com/docs/voice/tts/providers/soniox
+export const SONIOX_TTS_LANGUAGES = (
+  getTranscriptionProvider("soniox/stt-rt-v4")?.languages || []
+).filter((code) => code !== "auto");
+
+export function isSonioxVoice(voice) {
+  return /^Soniox\./i.test(String(voice || ""));
+}
+
 export function getNoiseSuppressionConfigDefaults(providerValue) {
   return (
     NOISE_SUPPRESSION_PROVIDERS.find((p) => p.value === providerValue)

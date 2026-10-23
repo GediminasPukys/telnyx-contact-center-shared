@@ -67,6 +67,10 @@ async function POST_handler(request) {
     const config = {
       voice,
       text,
+      // Soniox voices are multilingual; language selects the pronunciation.
+      ...(body?.voice_language && /^Soniox\./i.test(voice)
+        ? { language: body.voice_language }
+        : {}),
       voice_settings: {
         ...(voiceApiKeyRef && /^ElevenLabs\./i.test(voice)
           ? { api_key_ref: voiceApiKeyRef }

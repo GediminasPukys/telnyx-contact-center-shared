@@ -33,6 +33,8 @@ import {
 } from "@tabler/icons-react";
 import { notify } from "@/components/ToastNotify";
 import { VariableTextarea } from "./VariableTextarea";
+import { SpeechLanguageSelect } from "./SpeechLanguageSelect";
+import { isSonioxVoice } from "@/config/voice";
 
 function parseVoiceString(value, availableProviders = []) {
   const safe = String(value || "").trim();
@@ -338,11 +340,10 @@ export default function SpeakNodeEditor({
   const handleVoiceChange = (newVoiceName) => {
     setVoiceName(newVoiceName);
     // Voice IDs are already in full format (e.g., "ElevenLabs.eleven_flash_v2.Rachel")
-    // Always preserve voice_api_key_ref
-    onChange?.({
-      ...config,
-      voice: newVoiceName,
-    });
+    // Always preserve voice_api_key_ref; the speech language only applies to Soniox voices
+    const nextConfig = { ...config, voice: newVoiceName };
+    if (!isSonioxVoice(newVoiceName)) delete nextConfig.language;
+    onChange?.(nextConfig);
   };
 
   const handleTest = async () => {
@@ -388,6 +389,7 @@ export default function SpeakNodeEditor({
           text,
           voice,
           voice_api_key_ref: voiceApiKeyRef,
+          voice_language: config.language || undefined,
         }),
       });
 
@@ -658,6 +660,11 @@ export default function SpeakNodeEditor({
           </p>
         )}
       </div>
+
+      {/* Speech language (multilingual Soniox voices) */}
+      {isSonioxVoice(config.voice) && (
+        <SpeechLanguageSelect config={config} onChange={onChange} disabled={loading} />
+      )}
 
       {/* Voice API Key (ElevenLabs only) */}
       {provider === "ElevenLabs" && (

@@ -1452,6 +1452,14 @@ export const VOICE_FLOW_NODES = {
         description:
           "API key reference for ElevenLabs or other voice providers requiring authentication",
       },
+      language: {
+        type: "string",
+        label: "Speech Language",
+        required: false,
+        placeholder: "lt",
+        description:
+          "ISO 639-1 pronunciation language for multilingual voices (Soniox); omit for the provider default",
+      },
     },
   },
 
@@ -1641,6 +1649,14 @@ export const VOICE_FLOW_NODES = {
         required: false,
         description:
           "API key reference for ElevenLabs or other voice providers requiring authentication",
+      },
+      language: {
+        type: "string",
+        label: "Speech Language",
+        required: false,
+        placeholder: "lt",
+        description:
+          "ISO 639-1 pronunciation language for multilingual voices (Soniox); omit for the provider default",
       },
       minimum_digits: {
         type: "number",
