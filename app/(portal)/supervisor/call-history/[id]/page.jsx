@@ -154,8 +154,20 @@ export default function SupervisorCallHistoryDetailPage() {
     return events.filter((event) => event.type !== "agent_timeout");
   }, [interaction]);
 
-  const transcriptions =
-    interaction?.metadata?.agent_assist?.transcriptions || [];
+  const transcriptions = useMemo(() => {
+    const agentAssistTranscriptions =
+      interaction?.metadata?.agent_assist?.transcriptions || [];
+    if (agentAssistTranscriptions.length > 0) return agentAssistTranscriptions;
+    // Live call transcription (flow Start Transcription or Agent Assist) is
+    // persisted as ACD transcript artifacts, one row per final utterance.
+    return (interaction?.history?.artifacts?.transcripts || [])
+      .filter((row) => row.source === "live" && row.text)
+      .map((row) => ({
+        track: row.track,
+        transcript: row.text,
+        timestamp: row.occurred_at || row.created_at,
+      }));
+  }, [interaction]);
 
   const callSegments = useMemo(() => {
     if (!interaction) return [];
