@@ -71,3 +71,8 @@ test("password reset pages use the available configurable auth artwork", async (
     );
   }
 });
+
+test("invite set-password page is reachable without a session", async () => {
+  const proxy = await readFile(new URL("proxy.js", root), "utf8");
+  assert.match(proxy, /\(\?!signin\|signup\|forgot-password\|reset-password\|set-password\|/);
+});

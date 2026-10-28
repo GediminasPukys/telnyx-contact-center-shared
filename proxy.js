@@ -123,6 +123,6 @@ export async function proxy(request) {
 
 export const config = {
   matcher: [
-    "/((?!signin|signup|forgot-password|reset-password|activate|health|_next|favicon.ico).*)",
+    "/((?!signin|signup|forgot-password|reset-password|set-password|activate|health|_next|favicon.ico).*)",
   ],
 };
